@@ -1,0 +1,56 @@
+# Java & Maven
+backend/target/
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.log
+
+# IDEs & Editors
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.swp
+*.swo
+*~
+.settings/
+.project
+.classpath
+
+# Python (Mock-симулятори)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+*.egg-info/
+.pytest_cache/
+
+# Node.js & Next.js (Дашборд Командира)
+frontend/node_modules/
+node_modules/
+frontend/.next/
+.next/
+frontend/out/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.env*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-data/
+postgres-data/
