@@ -1,0 +1,200 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam class {
+    BackgroundColor LightCyan
+    BorderColor DarkSlateGray
+    ArrowColor DimGray
+}
+
+package "Domain Core (Ізольоване ядро)" <<Rectangle>> {
+    enum Side {
+        BLUE
+        RED
+    }
+
+    enum UnitStatus {
+        HEALTHY
+        DAMAGED
+        DESTROYED
+    }
+
+    enum SimulationStatus {
+        ACTIVE
+        PAUSED
+        STOPPED
+    }
+
+    enum EventType {
+        UNIT_DESTROYED
+        VALIDATION_ERROR
+        TIMEOUT_DISCONNECT
+        SIMULATION_PAUSED
+        SIMULATION_RESET
+        SNAPSHOT_SAVED
+    }
+
+    class UnitState {
+        - id: String
+        - side: Side
+        - x: double
+        - y: double
+        - viewRadius: double
+        - status: UnitStatus
+        + getEffectiveViewRadius(): double
+        + distanceTo(other: UnitState): double
+        + isOperational(): boolean
+    }
+
+    class SimulationTick {
+        - tickNumber: long
+        - timestamp: Instant
+        - status: SimulationStatus
+        - blueUnits: List<UnitState>
+        - redUnits: List<UnitState>
+    }
+
+    class Snapshot {
+        - id: UUID
+        - tickNumber: long
+        - createdAt: Instant
+        - units: List<UnitState>
+    }
+
+    class EventLog {
+        - id: UUID
+        - timestamp: Instant
+        - type: EventType
+        - side: Side
+        - message: String
+    }
+
+    interface FogOfWarService {
+        + calculateVisibleEnemies(allies: List<UnitState>, enemies: List<UnitState>): List<UnitState>
+        + isVisible(observer: UnitState, target: UnitState): boolean
+    }
+
+    class EuclideanFogOfWarService {
+        + calculateVisibleEnemies(allies: List<UnitState>, enemies: List<UnitState>): List<UnitState>
+        + isVisible(observer: UnitState, target: UnitState): boolean
+    }
+
+    FogOfWarService <|.. EuclideanFogOfWarService
+    UnitState "1" *-- "1" Side
+    UnitState "1" *-- "1" UnitStatus
+    SimulationTick "1" *-- "1" SimulationStatus
+    SimulationTick "1" *-- "*" UnitState
+    Snapshot "1" *-- "*" UnitState
+    EventLog "1" *-- "1" EventType
+    EventLog "1" *-- "0..1" Side
+}
+
+package "Service Layer (Синхронізація та стан)" <<Rectangle>> {
+    interface TickManager {
+        + submitUnits(side: Side, tickNumber: long, units: List<UnitState>): void
+        + isTickComplete(tickNumber: long): boolean
+        + processTick(tickNumber: long): void
+        + getVisibleEnemies(side: Side, tickNumber: long): List<UnitState>
+        + handleTimeouts(): void
+    }
+
+    class BarrierTickManager {
+        - currentTick: long
+        - tickTimeoutMs: long
+        - blueBuffer: Map<Long, List<UnitState>>
+        - redBuffer: Map<Long, List<UnitState>>
+        - visibleBlueCache: Map<Long, List<UnitState>>
+        - visibleRedCache: Map<Long, List<UnitState>>
+        + submitUnits(side: Side, tickNumber: long, units: List<UnitState>): void
+        + isTickComplete(tickNumber: long): boolean
+        + processTick(tickNumber: long): void
+        + getVisibleEnemies(side: Side, tickNumber: long): List<UnitState>
+        + handleTimeouts(): void
+    }
+
+    interface SimulationSessionService {
+        + initSimulation(): void
+        + resetSimulation(): void
+        + pauseSimulation(reason: String): void
+        + resumeSimulation(): void
+        + restoreFromSnapshot(snapshotId: UUID): void
+    }
+
+    class SimulationSessionServiceImpl {
+        - status: SimulationStatus
+        + initSimulation(): void
+        + resetSimulation(): void
+        + pauseSimulation(reason: String): void
+        + resumeSimulation(): void
+        + restoreFromSnapshot(snapshotId: UUID): void
+    }
+
+    class StateCheckpointingService {
+        - checkpointInterval: int
+        + checkAndSaveSnapshot(tickNumber: long, units: List<UnitState>): void
+        + recordEvent(type: EventType, side: Side, message: String): void
+        + loadSnapshot(snapshotId: UUID): Snapshot
+    }
+
+    TickManager <|.. BarrierTickManager
+    SimulationSessionService <|.. SimulationSessionServiceImpl
+
+    BarrierTickManager --> FogOfWarService : використовує для розрахунку FOW
+    BarrierTickManager --> StateCheckpointingService : викликає при завершенні тіку
+    SimulationSessionServiceImpl --> StateCheckpointingService : відновлення/скидання
+    SimulationSessionServiceImpl --> BarrierTickManager : керує станом
+}
+
+package "Persistence Layer (Збереження у БД)" <<Rectangle>> {
+    interface SnapshotRepository {
+        + save(snapshot: Snapshot): Snapshot
+        + findById(id: UUID): Optional<Snapshot>
+        + findAllByOrderByTickNumberDesc(): List<Snapshot>
+        + deleteAll(): void
+    }
+
+    interface EventLogRepository {
+        + save(event: EventLog): EventLog
+        + findAllByOrderByTimestampDesc(): List<EventLog>
+        + deleteAll(): void
+    }
+
+    StateCheckpointingService --> SnapshotRepository
+    StateCheckpointingService --> EventLogRepository
+}
+
+package "Web / API Layer (REST Контролери та Безпека)" <<Rectangle>> {
+    class ApiKeyAuthFilter {
+        - blueApiKey: String
+        - redApiKey: String
+        - adminApiKey: String
+        + doFilterInternal(request, response, chain): void
+    }
+
+    class TickController {
+        + submitTick(apiKey: String, request: SubmitUnitsDto): ResponseEntity
+        + getFogOfWar(apiKey: String, tickNumber: long): ResponseEntity<List<UnitDto>>
+    }
+
+    class SimulationController {
+        + initSimulation(): ResponseEntity
+        + resetSimulation(): ResponseEntity
+        + pauseSimulation(): ResponseEntity
+        + resumeSimulation(): ResponseEntity
+        + restoreSnapshot(snapshotId: UUID): ResponseEntity
+        + getStatus(): ResponseEntity<SimulationStatusDto>
+    }
+
+    class StateController {
+        + getFullState(): ResponseEntity<FullBattlefieldDto>
+        + getSnapshots(): ResponseEntity<List<SnapshotDto>>
+        + getEventLogs(): ResponseEntity<List<EventLogDto>>
+    }
+
+    TickController --> TickManager
+    SimulationController --> SimulationSessionService
+    StateController --> StateCheckpointingService
+    StateController --> BarrierTickManager
+}
+
+@enduml

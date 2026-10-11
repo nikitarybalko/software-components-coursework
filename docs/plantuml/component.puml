@@ -1,0 +1,75 @@
+@startuml
+skinparam componentStyle uml2
+skinparam packageStyle rectangle
+
+skinparam component {
+    BackgroundColor LightCyan
+    BorderColor DarkSlateGray
+    ArrowColor DimGray
+}
+
+skinparam interface {
+    BackgroundColor LightYellow
+    BorderColor DarkSlateGray
+}
+
+package "Клієнтське оточення (Clients)" {
+    [Blue Force Simulator\n(Python Mock)] as BlueSim
+    [Red Force Simulator\n(Python Mock)] as RedSim
+    [Дашборд Командира\n(Next.js Web UI)] as Dashboard
+}
+
+package "Серверний мікросервіс (Wargame Broker)" {
+    
+    package "API & Security Layer" {
+        [API Gateway & Auth Filter] as Gateway
+        [Payload Validator\n(Hibernate Validator)] as Validator
+        interface "REST Endpoints\n(HTTP/JSON)" as RestAPI
+    }
+
+    package "Synchronization & Session Layer" {
+        [Tick Synchronization Manager\n(Бар'єрна синхронізація)] as TickManager
+        [Session Lifecycle Manager\n(Init / Pause / Reset)] as SessionManager
+    }
+
+    package "Domain Computation Core (Ізольоване ядро)" {
+        [Fog of War Engine\n(Euclidean Geometry)] as FoWEngine
+        interface "IFogOfWarService" as IFoW
+    }
+
+    package "Persistence & State Management" {
+        [State Checkpointer\n(Snapshots & Events)] as Checkpointer
+        interface "IPersistencePort" as PersistencePort
+    }
+}
+
+database "PostgreSQL Database" {
+    [Snapshots Store] as SnapshotsDB
+    [Event Logs Store] as EventsDB
+}
+
+' Зв'язки клієнтів з API
+BlueSim ..> RestAPI : "POST /ticks/submit\nGET /ticks/{id}/fog-of-war\n(X-API-KEY: blue)"
+RedSim ..> RestAPI : "POST /ticks/submit\nGET /ticks/{id}/fog-of-war\n(X-API-KEY: red)"
+Dashboard ..> RestAPI : "GET /state/full\nPOST /simulation/{action}\n(Admin API)"
+
+RestAPI --> Gateway
+Gateway --> Validator : "Перевірка токена"
+Validator --> TickManager : "Валідовані UnitState DTOs"
+Gateway --> SessionManager : "Команди керування (Init, Reset, Pause)"
+
+' Внутрішня координація
+SessionManager --> TickManager : "Скидання буферів / Зміна статусу"
+TickManager --> IFoW : "Виклик фільтрації видимості\nO(N*M)"
+IFoW -up- FoWEngine
+
+TickManager --> Checkpointer : "Збереження зрізу кожні N кроків"
+SessionManager --> Checkpointer : "Відновлення зрізу (Restore)"
+Gateway --> Checkpointer : "Логування подій (дисконект, помилки)"
+
+' Доступ до бази даних
+Checkpointer --> PersistencePort
+PersistencePort --> SnapshotsDB : "Збереження / Завантаження Snapshot"
+PersistencePort --> EventsDB : "Запис критичних подій (EventLog)"
+
+@enduml
