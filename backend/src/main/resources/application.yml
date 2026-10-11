@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: wargame-broker
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/wargamedb}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+wargame:
+  security:
+    blue-api-key: ${WARGAME_BLUE_API_KEY:blue-secret-token}
+    red-api-key: ${WARGAME_RED_API_KEY:red-secret-token}
+    admin-api-key: ${WARGAME_ADMIN_API_KEY:admin-secret-token}
+  simulation:
+    tick-timeout-ms: 10000
+    snapshot-interval: 5
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
