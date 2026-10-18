@@ -8,6 +8,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import static org.apache.commons.collections4.CollectionUtils.isEmpty;
+
 @Service
 public class EuclideanFogOfWarService implements FogOfWarService {
 
@@ -15,12 +17,12 @@ public class EuclideanFogOfWarService implements FogOfWarService {
 
     @Override
     public List<UnitState> calculateVisibleEnemies(List<UnitState> allies, List<UnitState> enemies) {
-        if (allies == null || allies.isEmpty() || enemies == null || enemies.isEmpty()) {
+        if (isEmpty(allies) || isEmpty(enemies) ) {
             return Collections.emptyList();
         }
 
         List<UnitState> activeObservers = extractActiveObservers(allies);
-        if (activeObservers.isEmpty()) {
+        if (isEmpty(activeObservers)) {
             return Collections.emptyList();
         }
 
