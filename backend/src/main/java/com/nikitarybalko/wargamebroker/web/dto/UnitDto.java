@@ -44,6 +44,10 @@ public class UnitDto {
     @Schema(description = "Operational combat status of the unit", example = "HEALTHY")
     private UnitStatus status;
 
+    @Schema(description = "View radius after status penalties (DAMAGED halves it, DESTROYED zeroes it). Computed by the broker, ignored on input",
+            example = "37.5", accessMode = Schema.AccessMode.READ_ONLY)
+    private Double effectiveViewRadius;
+
     public static UnitDto fromDomain(UnitState domain) {
         if (domain == null) {
             return null;
@@ -55,6 +59,7 @@ public class UnitDto {
                 .y(domain.getY())
                 .viewRadius(domain.getViewRadius())
                 .status(domain.getStatus())
+                .effectiveViewRadius(domain.getEffectiveViewRadius())
                 .build();
     }
 

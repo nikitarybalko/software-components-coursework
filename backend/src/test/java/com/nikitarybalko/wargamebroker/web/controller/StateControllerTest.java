@@ -47,7 +47,7 @@ class StateControllerTest {
     @Test
     @DisplayName("Get full battlefield state returns units for both factions")
     void testGetFullState() throws Exception {
-        UnitState blue = new UnitState("b1", Side.BLUE, 10.0, 20.0, 50.0, UnitStatus.HEALTHY);
+        UnitState blue = new UnitState("b1", Side.BLUE, 10.0, 20.0, 50.0, UnitStatus.DAMAGED);
         UnitState red = new UnitState("r1", Side.RED, 15.0, 25.0, 40.0, UnitStatus.HEALTHY);
 
         when(tickManager.getCurrentTick()).thenReturn(2L);
@@ -63,6 +63,8 @@ class StateControllerTest {
                 .andExpect(jsonPath("$.currentTick").value(2))
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
                 .andExpect(jsonPath("$.blueUnits.length()").value(1))
+                .andExpect(jsonPath("$.blueUnits[0].viewRadius").value(50.0))
+                .andExpect(jsonPath("$.blueUnits[0].effectiveViewRadius").value(25.0))
                 .andExpect(jsonPath("$.redUnits.length()").value(1))
                 .andExpect(jsonPath("$.blueVisibleRed.length()").value(1))
                 .andExpect(jsonPath("$.redVisibleBlue.length()").value(1));
