@@ -4,8 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.ActiveProfiles;
+import com.nikitarybalko.wargamebroker.support.AbstractPostgresIntegrationTest;
 import com.nikitarybalko.wargamebroker.domain.model.EventLog;
 import com.nikitarybalko.wargamebroker.domain.model.EventType;
 import com.nikitarybalko.wargamebroker.domain.model.Side;
@@ -21,9 +22,9 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
-@ActiveProfiles("test")
-@DisplayName("Integration tests: Persistence & Checkpointing (JpaStateCheckpointingService)")
-class JpaStateCheckpointingServiceTest {
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@DisplayName("Integration tests: Persistence & Checkpointing on PostgreSQL (JpaStateCheckpointingService)")
+class JpaStateCheckpointingServiceTest extends AbstractPostgresIntegrationTest {
 
     @Autowired
     private SnapshotRepository snapshotRepository;

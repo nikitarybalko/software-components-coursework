@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nikitarybalko.wargamebroker.domain.model.Side;
 import com.nikitarybalko.wargamebroker.domain.model.UnitStatus;
 import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
+import com.nikitarybalko.wargamebroker.support.AbstractPostgresIntegrationTest;
 import com.nikitarybalko.wargamebroker.web.dto.SubmitUnitsRequest;
 import com.nikitarybalko.wargamebroker.web.dto.UnitDto;
 import com.nikitarybalko.wargamebroker.web.security.ApiKeyAuthFilter;
@@ -14,12 +15,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -27,9 +29,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
-@DisplayName("Integration tests: End-to-end simulation flow")
-class SimulationFullFlowIntegrationTest {
+@DisplayName("Integration tests: End-to-end simulation flow on PostgreSQL")
+class SimulationFullFlowIntegrationTest extends AbstractPostgresIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -169,5 +170,71 @@ class SimulationFullFlowIntegrationTest {
                         .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].type").value("SIMULATION_RESET"));
+    }
+
+    @Test
+    @DisplayName("Snapshot persisted in PostgreSQL restores battlefield and tick counter")
+    void testRestoreFromPersistedSnapshot() throws Exception {
+        for (long tick = 1; tick <= 4; tick++) {
+            submitUnit(BLUE_KEY, "blue-1", Side.BLUE, tick, tick * 10.0);
+            submitUnit(RED_KEY, "red-1", Side.RED, tick, 300.0 - tick * 10.0);
+        }
+        submitUnit(BLUE_KEY, "blue-1", Side.BLUE, 5, 999.0);
+
+        String snapshotsJson = mockMvc.perform(get("/api/v1/simulation/state/snapshots")
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].tickNumber").value(4))
+                .andExpect(jsonPath("$[1].tickNumber").value(2))
+                .andReturn().getResponse().getContentAsString();
+        UUID latestSnapshotId = UUID.fromString(objectMapper.readTree(snapshotsJson).get(0).get("id").asText());
+
+        mockMvc.perform(post("/api/v1/simulation/restore/" + latestSnapshotId)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PAUSED"))
+                .andExpect(jsonPath("$.currentTick").value(5))
+                .andExpect(jsonPath("$.submittedSides.length()").value(0));
+
+        String fullStateJson = mockMvc.perform(get("/api/v1/simulation/state/full")
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertEquals(40.0, objectMapper.readTree(fullStateJson).get("blueUnits").get(0).get("x").asDouble());
+        assertEquals(260.0, objectMapper.readTree(fullStateJson).get("redUnits").get(0).get("x").asDouble());
+
+        mockMvc.perform(post("/api/v1/simulation/resume")
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+
+        submitUnit(BLUE_KEY, "blue-1", Side.BLUE, 5, 50.0);
+        submitUnit(RED_KEY, "red-1", Side.RED, 5, 250.0);
+
+        mockMvc.perform(get("/api/v1/simulation/status")
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+                .andExpect(jsonPath("$.currentTick").value(6));
+    }
+
+    private void submitUnit(String apiKey, String unitId, Side side, long tick, double x) throws Exception {
+        UnitDto unit = UnitDto.builder()
+                .id(unitId)
+                .side(side)
+                .x(x)
+                .y(100.0)
+                .viewRadius(30.0)
+                .status(UnitStatus.HEALTHY)
+                .build();
+        SubmitUnitsRequest request = SubmitUnitsRequest.builder()
+                .tickNumber(tick)
+                .units(List.of(unit))
+                .build();
+
+        mockMvc.perform(post("/api/v1/simulation/ticks/submit")
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, apiKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
     }
 }

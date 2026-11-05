@@ -10,13 +10,13 @@ import com.nikitarybalko.wargamebroker.domain.model.UnitStatus;
 import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
 import com.nikitarybalko.wargamebroker.domain.service.TickManager;
 import com.nikitarybalko.wargamebroker.web.security.ApiKeyAuthFilter;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
@@ -28,8 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@WebMvcTest(StateController.class)
 @ActiveProfiles("test")
 @DisplayName("Web tests: StateController")
 class StateControllerTest {
@@ -37,10 +36,10 @@ class StateControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private TickManager tickManager;
 
-    @MockBean
+    @MockitoBean
     private StateCheckpointingService checkpointingService;
 
     private static final String ADMIN_KEY = "admin-secret-token";

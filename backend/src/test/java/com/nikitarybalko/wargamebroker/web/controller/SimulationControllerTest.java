@@ -1,21 +1,25 @@
 package com.nikitarybalko.wargamebroker.web.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nikitarybalko.wargamebroker.domain.exception.InvalidLifecycleTransitionException;
 import com.nikitarybalko.wargamebroker.domain.exception.SnapshotNotFoundException;
 import com.nikitarybalko.wargamebroker.domain.model.SimulationStatus;
 import com.nikitarybalko.wargamebroker.domain.service.SimulationSessionService;
+import com.nikitarybalko.wargamebroker.domain.service.SimulatorRegistry;
+import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
 import com.nikitarybalko.wargamebroker.domain.service.TickManager;
 import com.nikitarybalko.wargamebroker.web.dto.PauseRequest;
+import com.nikitarybalko.wargamebroker.web.mapper.SimulationStatusMapper;
 import com.nikitarybalko.wargamebroker.web.security.ApiKeyAuthFilter;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -30,8 +34,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@WebMvcTest(SimulationController.class)
+@Import(SimulationStatusMapper.class)
 @ActiveProfiles("test")
 @DisplayName("Web tests: SimulationController")
 class SimulationControllerTest {
@@ -42,11 +46,17 @@ class SimulationControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private SimulationSessionService sessionService;
 
-    @MockBean
+    @MockitoBean
     private TickManager tickManager;
+
+    @MockitoBean
+    private SimulatorRegistry simulatorRegistry;
+
+    @MockitoBean
+    private StateCheckpointingService checkpointingService;
 
     private static final String ADMIN_KEY = "admin-secret-token";
     private static final String BLUE_KEY = "blue-secret-token";

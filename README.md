@@ -16,9 +16,9 @@
 | Компонент | Технології |
 | :--- | :--- |
 | **Серверний мікросервіс** | **Java 21 LTS**, **Spring Boot 3.4**, Spring Data JPA, Hibernate Validator, **Lombok** |
-| **База даних** | **PostgreSQL**, H2 Database (для ізольованих Unit/Integration тестів) |
+| **База даних** | **PostgreSQL** |
 | **Документація API** | **OpenAPI 3 / Swagger UI** (`springdoc-openapi`) |
-| **Тестування** | **JUnit 5**, **Mockito**, Testcontainers |
+| **Тестування** | **JUnit 5**, **Mockito**, Spring MockMvc, **Testcontainers** (PostgreSQL) |
 | **Архітектурні діаграми** | **PlantUML** |
 | **Mock-симулятори** | **Python 3** |
 | **Фронтенд** | **Next.js**, React, TailwindCSS, HTML5 |
@@ -59,6 +59,20 @@ docker compose --profile demo run --rm simulators --url=http://backend:8080 --ti
 ```
 
 Зупинка зі збереженням даних БД: `docker compose down`. Повне очищення разом із томом БД: `docker compose down -v`.
+
+### Тести
+
+```bash
+cd backend && ./mvnw test
+```
+
+Потрібен запущений Docker: інтеграційні тести піднімають PostgreSQL 16 через Testcontainers.
+
+| Рівень | Інструменти | Що покриває |
+| :--- | :--- | :--- |
+| Unit | JUnit 5 + Mockito | Туман війни, `UnitState`, бар'єрна синхронізація тіків, життєвий цикл сесії |
+| Web slice | `@WebMvcTest` + MockMvc | контролери, валідація, API-ключі та ролі, коди помилок |
+| Інтеграційні | `@SpringBootTest` / `@DataJpaTest` + Testcontainers | повний цикл REST → ядро → PostgreSQL, snapshot'и, журнал подій, Reset, відновлення зі snapshot'а |
 
 ### API-ключі (заголовок `X-API-KEY`)
 
