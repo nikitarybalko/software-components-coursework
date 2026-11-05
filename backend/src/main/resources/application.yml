@@ -10,6 +10,7 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
     show-sql: false
@@ -25,6 +26,7 @@ wargame:
   simulation:
     tick-timeout-ms: 10000
     snapshot-interval: 5
+    timeout-check-interval-ms: 1000
 
 springdoc:
   swagger-ui:

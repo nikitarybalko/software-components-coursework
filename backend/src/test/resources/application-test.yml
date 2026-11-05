@@ -20,3 +20,5 @@ wargame:
   simulation:
     tick-timeout-ms: 1000
     snapshot-interval: 2
+    scheduler:
+      enabled: false
