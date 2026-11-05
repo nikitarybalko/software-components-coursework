@@ -50,6 +50,21 @@ services:
           memory: 512M
           cpus: "1.0"
 
+  dashboard:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BROKER_URL: http://backend:8080
+      WARGAME_ADMIN_API_KEY: ${WARGAME_ADMIN_API_KEY:-admin-secret-token}
+    ports:
+      - "${DASHBOARD_PORT:-3000}:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
   simulators:
     build: ./simulators
     profiles: ["demo"]
