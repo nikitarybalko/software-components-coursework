@@ -10,5 +10,5 @@ import java.util.UUID;
 @Repository
 public interface EventLogRepository extends JpaRepository<EventLogEntity, UUID> {
 
-    List<EventLogEntity> findAllByOrderByTimestampDesc();
+    List<EventLogEntity> findTop200ByOrderByTimestampDesc();
 }

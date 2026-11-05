@@ -1,4 +1,4 @@
-package com.nikitarybalko.wargamebroker.domain.service.impl;
+package com.nikitarybalko.wargamebroker.infrastructure.persistence;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -77,7 +77,7 @@ public class JpaStateCheckpointingService implements StateCheckpointingService {
     @Override
     @Transactional(readOnly = true)
     public List<Snapshot> getRecentSnapshots() {
-        return snapshotRepository.findAllByOrderByTickNumberDesc().stream()
+        return snapshotRepository.findTop50ByOrderByTickNumberDesc().stream()
                 .map(this::toDomainSnapshot)
                 .toList();
     }
@@ -85,7 +85,7 @@ public class JpaStateCheckpointingService implements StateCheckpointingService {
     @Override
     @Transactional(readOnly = true)
     public List<EventLog> getRecentEvents() {
-        return eventLogRepository.findAllByOrderByTimestampDesc().stream()
+        return eventLogRepository.findTop200ByOrderByTimestampDesc().stream()
                 .map(this::toDomainEvent)
                 .toList();
     }

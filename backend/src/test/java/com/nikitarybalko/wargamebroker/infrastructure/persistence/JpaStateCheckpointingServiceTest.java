@@ -12,7 +12,6 @@ import com.nikitarybalko.wargamebroker.domain.model.Side;
 import com.nikitarybalko.wargamebroker.domain.model.Snapshot;
 import com.nikitarybalko.wargamebroker.domain.model.UnitState;
 import com.nikitarybalko.wargamebroker.domain.model.UnitStatus;
-import com.nikitarybalko.wargamebroker.domain.service.impl.JpaStateCheckpointingService;
 import com.nikitarybalko.wargamebroker.infrastructure.persistence.repository.EventLogRepository;
 import com.nikitarybalko.wargamebroker.infrastructure.persistence.repository.SnapshotRepository;
 

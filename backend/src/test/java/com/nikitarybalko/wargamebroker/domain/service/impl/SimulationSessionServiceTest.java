@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import com.nikitarybalko.wargamebroker.domain.exception.InvalidLifecycleTransitionException;
 import com.nikitarybalko.wargamebroker.domain.exception.SimulationException;
 import com.nikitarybalko.wargamebroker.domain.model.EventType;
 import com.nikitarybalko.wargamebroker.domain.model.Side;
@@ -14,6 +15,7 @@ import com.nikitarybalko.wargamebroker.domain.model.Snapshot;
 import com.nikitarybalko.wargamebroker.domain.model.UnitState;
 import com.nikitarybalko.wargamebroker.domain.model.UnitStatus;
 import com.nikitarybalko.wargamebroker.domain.service.SimulationSessionService;
+import com.nikitarybalko.wargamebroker.domain.service.SimulatorRegistry;
 import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
 import com.nikitarybalko.wargamebroker.domain.service.TickManager;
 
@@ -36,11 +38,14 @@ class SimulationSessionServiceTest {
     @Mock
     private StateCheckpointingService checkpointingService;
 
+    @Mock
+    private SimulatorRegistry simulatorRegistry;
+
     private SimulationSessionService sessionService;
 
     @BeforeEach
     void setUp() {
-        sessionService = new SimulationSessionServiceImpl(tickManager, checkpointingService);
+        sessionService = new SimulationSessionServiceImpl(tickManager, checkpointingService, simulatorRegistry);
     }
 
     @Test
@@ -56,6 +61,8 @@ class SimulationSessionServiceTest {
     @Test
     @DisplayName("pauseSimulation and resumeSimulation change status and record events")
     void testPauseAndResumeSimulation() {
+        when(tickManager.getStatus()).thenReturn(SimulationStatus.ACTIVE, SimulationStatus.PAUSED);
+
         sessionService.pauseSimulation("Test reason");
         verify(tickManager).setStatus(SimulationStatus.PAUSED);
         verify(checkpointingService).recordEvent(eq(EventType.SIMULATION_PAUSED), isNull(), eq("Test reason"));
@@ -63,6 +70,46 @@ class SimulationSessionServiceTest {
         sessionService.resumeSimulation();
         verify(tickManager).setStatus(SimulationStatus.ACTIVE);
         verify(checkpointingService).recordEvent(eq(EventType.SIMULATION_RESUMED), isNull(), anyString());
+    }
+
+    @Test
+    @DisplayName("Pausing a non-active simulation throws InvalidLifecycleTransitionException")
+    void testPauseWhenNotActiveThrowsException() {
+        when(tickManager.getStatus()).thenReturn(SimulationStatus.INITIALIZING);
+
+        assertThrows(InvalidLifecycleTransitionException.class, () -> sessionService.pauseSimulation(null));
+        verify(tickManager, never()).setStatus(any());
+    }
+
+    @Test
+    @DisplayName("Resuming a non-paused simulation throws InvalidLifecycleTransitionException")
+    void testResumeWhenNotPausedThrowsException() {
+        when(tickManager.getStatus()).thenReturn(SimulationStatus.ACTIVE);
+
+        assertThrows(InvalidLifecycleTransitionException.class, () -> sessionService.resumeSimulation());
+        verify(tickManager, never()).setStatus(any());
+    }
+
+    @Test
+    @DisplayName("resetSimulation clears in-memory state and persisted history")
+    void testResetSimulationClearsDatabase() {
+        sessionService.resetSimulation();
+
+        var order = inOrder(tickManager, checkpointingService);
+        order.verify(tickManager).reset();
+        order.verify(checkpointingService).clearAll();
+        order.verify(checkpointingService).recordEvent(eq(EventType.SIMULATION_RESET), isNull(), anyString());
+    }
+
+    @Test
+    @DisplayName("registerSimulator records an event only on first registration")
+    void testRegisterSimulatorRecordsEventOnce() {
+        when(simulatorRegistry.register(Side.BLUE)).thenReturn(true, false);
+
+        sessionService.registerSimulator(Side.BLUE);
+        sessionService.registerSimulator(Side.BLUE);
+
+        verify(checkpointingService, times(1)).recordEvent(eq(EventType.SIMULATOR_REGISTERED), eq(Side.BLUE), anyString());
     }
 
     @Test

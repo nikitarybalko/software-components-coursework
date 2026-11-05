@@ -11,7 +11,7 @@ import java.util.UUID;
 @Repository
 public interface SnapshotRepository extends JpaRepository<SnapshotEntity, UUID> {
 
-    List<SnapshotEntity> findAllByOrderByTickNumberDesc();
+    List<SnapshotEntity> findTop50ByOrderByTickNumberDesc();
 
     Optional<SnapshotEntity> findFirstByOrderByTickNumberDesc();
 }

@@ -1,16 +1,20 @@
 package com.nikitarybalko.wargamebroker.domain.service.impl;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import com.nikitarybalko.wargamebroker.domain.exception.SimulationException;
+import com.nikitarybalko.wargamebroker.domain.exception.InvalidLifecycleTransitionException;
+import com.nikitarybalko.wargamebroker.domain.exception.SnapshotNotFoundException;
 import com.nikitarybalko.wargamebroker.domain.model.EventType;
+import com.nikitarybalko.wargamebroker.domain.model.Side;
 import com.nikitarybalko.wargamebroker.domain.model.SimulationStatus;
 import com.nikitarybalko.wargamebroker.domain.model.Snapshot;
 import com.nikitarybalko.wargamebroker.domain.service.SimulationSessionService;
+import com.nikitarybalko.wargamebroker.domain.service.SimulatorRegistry;
 import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
 import com.nikitarybalko.wargamebroker.domain.service.TickManager;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @Slf4j
@@ -18,8 +22,19 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SimulationSessionServiceImpl implements SimulationSessionService {
 
+    private static final String DEFAULT_PAUSE_REASON = "User requested pause";
+
     private final TickManager tickManager;
     private final StateCheckpointingService checkpointingService;
+    private final SimulatorRegistry simulatorRegistry;
+
+    @Override
+    public void registerSimulator(Side side) {
+        if (simulatorRegistry.register(side)) {
+            checkpointingService.recordEvent(EventType.SIMULATOR_REGISTERED, side, side + " simulator registered");
+            log.info("Simulator registered for side {}", side);
+        }
+    }
 
     @Override
     public void initSimulation() {
@@ -32,21 +47,23 @@ public class SimulationSessionServiceImpl implements SimulationSessionService {
     @Override
     public void resetSimulation() {
         tickManager.reset();
-        tickManager.setStatus(SimulationStatus.INITIALIZING);
+        checkpointingService.clearAll();
         checkpointingService.recordEvent(EventType.SIMULATION_RESET, null, "Simulation reset to initial state");
-        log.info("Simulation reset");
+        log.info("Simulation reset, persisted snapshots and events cleared");
     }
 
     @Override
     public void pauseSimulation(String reason) {
+        requireStatus(SimulationStatus.ACTIVE, "pause");
         tickManager.setStatus(SimulationStatus.PAUSED);
-        String msg = reason != null ? reason : "User requested pause";
-        checkpointingService.recordEvent(EventType.SIMULATION_PAUSED, null, msg);
-        log.info("Simulation paused: {}", msg);
+        String message = Objects.nonNull(reason) ? reason : DEFAULT_PAUSE_REASON;
+        checkpointingService.recordEvent(EventType.SIMULATION_PAUSED, null, message);
+        log.info("Simulation paused: {}", message);
     }
 
     @Override
     public void resumeSimulation() {
+        requireStatus(SimulationStatus.PAUSED, "resume");
         tickManager.setStatus(SimulationStatus.ACTIVE);
         checkpointingService.recordEvent(EventType.SIMULATION_RESUMED, null, "Simulation session resumed");
         log.info("Simulation resumed");
@@ -55,7 +72,7 @@ public class SimulationSessionServiceImpl implements SimulationSessionService {
     @Override
     public void restoreFromSnapshot(UUID snapshotId) {
         Snapshot snapshot = checkpointingService.loadSnapshot(snapshotId)
-                .orElseThrow(() -> new SimulationException("Snapshot not found with ID: " + snapshotId));
+                .orElseThrow(() -> new SnapshotNotFoundException(snapshotId));
 
         tickManager.restoreState(snapshot.getTickNumber(), snapshot.getUnits());
         checkpointingService.recordEvent(EventType.SNAPSHOT_RESTORED, null,
@@ -66,5 +83,12 @@ public class SimulationSessionServiceImpl implements SimulationSessionService {
     @Override
     public SimulationStatus getStatus() {
         return tickManager.getStatus();
+    }
+
+    private void requireStatus(SimulationStatus expected, String action) {
+        SimulationStatus current = tickManager.getStatus();
+        if (current != expected) {
+            throw new InvalidLifecycleTransitionException(action, current);
+        }
     }
 }
