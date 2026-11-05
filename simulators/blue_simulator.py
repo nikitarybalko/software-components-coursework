@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+import argparse
+import time
+import sys
+from mesa_model import TacticalWargameModel
+
+def create_blue_model(broker_url: str, api_key: str) -> TacticalWargameModel:
+    model = TacticalWargameModel(side="BLUE", api_key=api_key, broker_url=broker_url)
+    # Western deployment flank
+    model.add_tactical_unit("blue-tank-1", x=20.0, y=70.0, view_radius=60.0, speed=3.8)
+    model.add_tactical_unit("blue-scout-1", x=35.0, y=100.0, view_radius=85.0, speed=5.5)
+    model.add_tactical_unit("blue-infantry-1", x=15.0, y=120.0, view_radius=50.0, speed=2.5)
+    model.add_tactical_unit("blue-apc-1", x=25.0, y=90.0, view_radius=55.0, speed=4.2)
+    return model
+
+def run_blue_simulator(broker_url: str, api_key: str, tick_delay: float, max_ticks: int):
+    model = create_blue_model(broker_url, api_key)
+    if not model.wait_for_broker() or not model.register():
+        return
+
+    model.log(f"Starting Mesa simulation run for {max_ticks} ticks...")
+    while model.current_tick <= max_ticks:
+        lifecycle = model.sync_simulation_lifecycle()
+        if lifecycle == "INITIALIZING":
+            model.log("Simulation session is initializing. Waiting...")
+            time.sleep(1.0)
+            continue
+        elif lifecycle == "PAUSED":
+            model.log("Simulation session is paused. Waiting for resume...")
+            time.sleep(1.0)
+            continue
+        elif lifecycle == "STOPPED":
+            model.log("Simulation session stopped.")
+            break
+
+        model.step()
+        time.sleep(tick_delay)
+
+    model.log("Blue Force Mesa simulation finished.")
+
+def main():
+    parser = argparse.ArgumentParser(description="Blue Force Mesa Simulator")
+    parser.add_argument("--url", default="http://localhost:8080", help="Wargame Broker base URL")
+    parser.add_argument("--api-key", default="blue-secret-token", help="Blue force API key")
+    parser.add_argument("--delay", type=float, default=0.5, help="Delay between ticks in seconds")
+    parser.add_argument("--ticks", type=int, default=50, help="Max ticks to simulate")
+    args = parser.parse_args()
+
+    run_blue_simulator(args.url, args.api_key, args.delay, args.ticks)
+
+if __name__ == "__main__":
+    main()
