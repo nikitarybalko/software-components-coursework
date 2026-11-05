@@ -1,0 +1,71 @@
+name: wargame
+
+x-api-keys: &api-keys
+  WARGAME_BLUE_API_KEY: ${WARGAME_BLUE_API_KEY:-blue-secret-token}
+  WARGAME_RED_API_KEY: ${WARGAME_RED_API_KEY:-red-secret-token}
+  WARGAME_ADMIN_API_KEY: ${WARGAME_ADMIN_API_KEY:-admin-secret-token}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wargamedb
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *api-keys
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wargamedb
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+  simulators:
+    build: ./simulators
+    profiles: ["demo"]
+    depends_on:
+      backend:
+        condition: service_healthy
+    command:
+      - --url=http://backend:8080
+      - --admin-key=${WARGAME_ADMIN_API_KEY:-admin-secret-token}
+      - --blue-key=${WARGAME_BLUE_API_KEY:-blue-secret-token}
+      - --red-key=${WARGAME_RED_API_KEY:-red-secret-token}
+      - --ticks=${SIMULATION_TICKS:-30}
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+volumes:
+  postgres-data:

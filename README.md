@@ -37,3 +37,42 @@ software-components-coursework/
 ├── frontend/                 # Веб-дашборд Командира на Next.js
 └── docs/                     # Проєктна документація курсової роботи
 ```
+
+
+---
+
+## 4. Запуск
+
+Потрібні лише Docker і Docker Compose. Мікросервіс і PostgreSQL піднімаються однією командою:
+
+```bash
+docker compose up -d --build
+```
+
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- Контейнер мікросервісу обмежено 512 MB RAM (JVM використовує до 75% ліміту), PostgreSQL обмежено 256 MB.
+
+Демонстраційний прогін Mesa-симуляторів (Blue та Red Force) проти запущеного брокера:
+
+```bash
+docker compose --profile demo run --rm simulators --url=http://backend:8080 --ticks=30
+```
+
+Зупинка зі збереженням даних БД: `docker compose down`. Повне очищення разом із томом БД: `docker compose down -v`.
+
+### API-ключі (заголовок `X-API-KEY`)
+
+| Ключ за замовчуванням | Роль | Доступ |
+| :--- | :--- | :--- |
+| `blue-secret-token` | Blue Force | реєстрація симулятора, відправка своїх юнітів, свій Туман війни, статус |
+| `red-secret-token` | Red Force | те саме для Red Force |
+| `admin-secret-token` | Адміністратор | керування життєвим циклом (init, pause, resume, reset, restore), повна картина поля бою, snapshot'и, журнал подій |
+
+Ключі перевизначаються змінними середовища `WARGAME_BLUE_API_KEY`, `WARGAME_RED_API_KEY`, `WARGAME_ADMIN_API_KEY`.
+
+### Порядок роботи симулятора
+
+1. `POST /api/v1/simulators/register`: реєстрація сторони (без неї відправка юнітів повертає 409).
+2. Адміністратор викликає `POST /api/v1/simulation/init`.
+3. Кожен тік: `POST /api/v1/simulation/ticks/submit`, потім опитування `GET /api/v1/simulation/ticks/{tick}/fog-of-war`. Поки суперник не відправив свій хід, endpoint повертає 409.
+4. Якщо жодна зі сторін не відповідає довше за тайм-аут (10 с), симуляція автоматично переходить у `PAUSED`.
