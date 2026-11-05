@@ -24,6 +24,8 @@ def init_simulation(url: str, admin_key: str) -> bool:
 def run_model_loop(model, delay: float, ticks: int):
     while model.current_tick <= ticks:
         status = model.sync_simulation_lifecycle()
+        if model.current_tick > ticks:
+            break
         if status in ("INITIALIZING", "PAUSED"):
             time.sleep(0.5)
             continue

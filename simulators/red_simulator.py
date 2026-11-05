@@ -21,6 +21,8 @@ def run_red_simulator(broker_url: str, api_key: str, tick_delay: float, max_tick
     model.log(f"Starting Mesa simulation run for {max_ticks} ticks...")
     while model.current_tick <= max_ticks:
         lifecycle = model.sync_simulation_lifecycle()
+        if model.current_tick > max_ticks:
+            break
         if lifecycle == "INITIALIZING":
             model.log("Simulation session is initializing. Waiting...")
             time.sleep(1.0)
