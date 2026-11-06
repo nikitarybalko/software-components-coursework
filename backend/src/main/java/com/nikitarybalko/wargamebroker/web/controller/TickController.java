@@ -12,6 +12,7 @@ import com.nikitarybalko.wargamebroker.web.dto.SubmitUnitsRequest;
 import com.nikitarybalko.wargamebroker.web.dto.SubmitUnitsResponse;
 import com.nikitarybalko.wargamebroker.web.dto.UnitDto;
 import com.nikitarybalko.wargamebroker.web.mapper.SimulationStatusMapper;
+import com.nikitarybalko.wargamebroker.web.security.AnyAuthenticatedRole;
 import com.nikitarybalko.wargamebroker.web.security.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -38,6 +39,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 @Tag(name = "Tick Management", description = "Endpoints for synchronizing simulation steps and retrieving Fog of War intelligence")
 @SecurityRequirement(name = OpenApiConfig.SECURITY_SCHEME_NAME)
+@AnyAuthenticatedRole
 public class TickController {
 
     private final TickManager tickManager;

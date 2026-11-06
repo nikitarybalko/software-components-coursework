@@ -3,7 +3,6 @@ package com.nikitarybalko.wargamebroker.web.security;
 import com.nikitarybalko.wargamebroker.domain.model.Side;
 import jakarta.servlet.http.HttpServletRequest;
 
-import java.util.Arrays;
 import java.util.Objects;
 
 public final class SecurityUtils {
@@ -24,10 +23,9 @@ public final class SecurityUtils {
         return (Side) side;
     }
 
-    public static void requireRole(HttpServletRequest request, ClientRole... allowedRoles) {
+    public static void requireRole(HttpServletRequest request, AccessRule rule) {
         ClientRole currentRole = getAuthenticatedRole(request);
-        boolean allowed = Arrays.stream(allowedRoles).anyMatch(r -> r == currentRole);
-        if (!allowed) {
+        if (!rule.permits(currentRole)) {
             throw new ForbiddenException("Role " + currentRole + " is not permitted to perform this operation");
         }
     }

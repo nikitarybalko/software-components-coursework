@@ -6,6 +6,7 @@ import com.nikitarybalko.wargamebroker.web.ApiPaths;
 import com.nikitarybalko.wargamebroker.web.dto.PauseRequest;
 import com.nikitarybalko.wargamebroker.web.dto.SimulationStatusResponse;
 import com.nikitarybalko.wargamebroker.web.mapper.SimulationStatusMapper;
+import com.nikitarybalko.wargamebroker.web.security.AnyAuthenticatedRole;
 import com.nikitarybalko.wargamebroker.web.security.ClientRole;
 import com.nikitarybalko.wargamebroker.web.security.RequiresRole;
 import io.swagger.v3.oas.annotations.Operation;
@@ -83,6 +84,7 @@ public class SimulationController {
 
     @Operation(summary = "Get simulation status", description = "Returns current simulation lifecycle status and tick")
     @GetMapping("/status")
+    @AnyAuthenticatedRole
     public ResponseEntity<SimulationStatusResponse> getStatus() {
         return ResponseEntity.ok(statusMapper.currentStatus());
     }
