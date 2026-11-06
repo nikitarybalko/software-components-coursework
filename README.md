@@ -59,6 +59,8 @@ docker compose up -d --build
 docker compose --profile demo run --rm simulators --url=http://backend:8080 --ticks=30
 ```
 
+Параметр `--seed=42` робить бій відтворюваним: з тим самим seed юніти рухаються й зазнають втрат однаково при кожному запуску. Blue використовує seed, Red використовує seed + 1.
+
 Зупинка зі збереженням даних БД: `docker compose down`. Повне очищення разом із томом БД: `docker compose down -v`.
 
 ### Тести

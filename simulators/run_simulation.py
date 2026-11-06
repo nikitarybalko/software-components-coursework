@@ -43,6 +43,8 @@ def main():
     parser.add_argument("--delay", type=float, default=0.4, help="Delay between ticks")
     parser.add_argument("--ticks", type=int, default=30, help="Number of ticks to run")
     parser.add_argument("--no-init", action="store_true", help="Do not auto-init simulation")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Random seed for a reproducible battle (Red uses seed + 1)")
     args = parser.parse_args()
 
     if not args.no_init:
@@ -56,8 +58,9 @@ def main():
             print("[ORCHESTRATOR] Broker is not reachable or initialization failed. Exiting.")
             return
 
-    blue_model = create_blue_model(args.url, args.blue_key)
-    red_model = create_red_model(args.url, args.red_key)
+    red_seed = None if args.seed is None else args.seed + 1
+    blue_model = create_blue_model(args.url, args.blue_key, args.seed)
+    red_model = create_red_model(args.url, args.red_key, red_seed)
 
     if not (blue_model.register() and red_model.register()):
         print("[ORCHESTRATOR] Simulator registration failed. Exiting.")

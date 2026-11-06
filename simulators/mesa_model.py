@@ -1,5 +1,4 @@
 import math
-import random
 import time
 import requests
 from typing import List, Dict, Optional, Tuple
@@ -56,7 +55,7 @@ class TacticalUnitAgent(mesa.Agent):
         else:
             # Tactical march across the battlefield
             target_x = self.pos[0] + (effective_speed * 1.5 if self.side == "BLUE" else -effective_speed * 1.5)
-            target_y = self.pos[1] + random.uniform(-1.0, 1.0)
+            target_y = self.pos[1] + self.model.random.uniform(-1.0, 1.0)
             self._move_towards(target_x, target_y, effective_speed, min_standoff=0.0)
 
     def _active_threats(self) -> List[Dict]:
@@ -84,7 +83,7 @@ class TacticalUnitAgent(mesa.Agent):
             ex = enemy.get("x", 0.0)
             ey = enemy.get("y", 0.0)
             if self.distance_to(ex, ey) <= 18.0:
-                roll = random.random()
+                roll = self.model.random.random()
                 if roll < 0.15:
                     self.status = "DAMAGED"
                 elif roll < 0.22 and self.status == "DAMAGED":
@@ -98,8 +97,8 @@ class TacticalWargameModel(mesa.Model):
     via REST API with the Wargame Broker.
     """
     def __init__(self, side: str, api_key: str, broker_url: str = "http://localhost:8080",
-                 width: float = 300.0, height: float = 200.0):
-        super().__init__()
+                 width: float = 300.0, height: float = 200.0, seed: Optional[int] = None):
+        super().__init__(seed=seed)
         self.side = side
         self.api_key = api_key
         self.broker_url = broker_url.rstrip("/")
