@@ -135,7 +135,7 @@ export function UnitMarker({ unit, size, spotted }: { unit: Unit; size: number; 
                 strokeWidth={1.2} strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
       )}
       <UnitFrame side={unit.side} cx={unit.x} cy={unit.y} size={size} fill={frameFill} />
-      <UnitPictogram type={unit.unitType} box={pictogramBox(unit.side, unit.x, unit.y, size)}
+      <UnitPictogram type={unit.unitType} box={pictogramBox(unit.x, unit.y, size)}
                      color={destroyed ? MAP_COLORS.inkFaint : MAP_COLORS.ink} hole={frameFill} />
       <ConditionBar unit={unit} size={size} />
       <text x={unit.x} y={labelY} fontSize={size * 0.9} textAnchor="middle" dominantBaseline="central"

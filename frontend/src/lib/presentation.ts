@@ -12,6 +12,7 @@ export const MAP_COLORS = {
   inkSoft: "#4a5443",
   inkFaint: "#858a76",
   sheet: "#f4f0e3",
+  paper: "#e9e3cf",
   rule: "#b3ab93",
   ruleSoft: "#d6cfb8",
   destroyedFill: "#c9c2ad",

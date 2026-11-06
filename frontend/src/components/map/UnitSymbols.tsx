@@ -7,9 +7,12 @@ const GLYPH_WIDTH = 24;
 const GLYPH_HEIGHT = 16;
 const GLYPH_FILL_RATIO = 0.95;
 
-/** Hostile diamond is drawn larger than the friendly rectangle so both hold a pictogram of similar size. */
-const HOSTILE_FRAME_SCALE = 1.35;
 const FRIEND_FRAME_ASPECT = 0.7;
+/** Pictogram box shared by both frames, relative to the frame size, so every side shows the same icon size. */
+const GLYPH_HALF_WIDTH = 0.84;
+const GLYPH_HALF_HEIGHT = (GLYPH_HALF_WIDTH * GLYPH_HEIGHT) / GLYPH_WIDTH;
+/** A centred box fits a diamond when halfWidth + halfHeight <= half-diagonal; the rest is breathing room. */
+const HOSTILE_FRAME_SCALE = (GLYPH_HALF_WIDTH + GLYPH_HALF_HEIGHT) * 1.08;
 
 type Glyph = (color: string, hole: string) => ReactNode;
 
@@ -83,13 +86,9 @@ function hostileHalfDiagonal(size: number) {
   return size * HOSTILE_FRAME_SCALE;
 }
 
-/** Largest pictogram box with the glyph's aspect ratio that fits the frame. */
-export function pictogramBox(side: Side, cx: number, cy: number, size: number): SymbolBox {
-  if (side === "BLUE") {
-    return { cx, cy, halfWidth: size, halfHeight: size * FRIEND_FRAME_ASPECT };
-  }
-  const diagonal = hostileHalfDiagonal(size);
-  return { cx, cy, halfWidth: diagonal * 0.6, halfHeight: diagonal * 0.4 };
+/** The same pictogram box for both sides; the hostile diamond is sized to contain it. */
+export function pictogramBox(cx: number, cy: number, size: number): SymbolBox {
+  return { cx, cy, halfWidth: size * GLYPH_HALF_WIDTH, halfHeight: size * GLYPH_HALF_HEIGHT };
 }
 
 export function frameBottom(side: Side, cy: number, size: number) {

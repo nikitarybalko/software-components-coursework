@@ -16,11 +16,12 @@ interface GridLabel {
 }
 
 /** Labels for every grid square that is at least partly visible, centred on its visible part. */
-function gridLabels(sheetStart: number, viewStart: number, viewLength: number, zoom: number, minVisible: number,
-                    toText: (index: number) => string): GridLabel[] {
-  const first = Math.floor(viewStart / GRID_STEP);
-  const last = Math.ceil((viewStart + viewLength) / GRID_STEP) - 1;
+function gridLabels(sheetStart: number, sheetLength: number, viewStart: number, viewLength: number, zoom: number,
+                    minVisible: number, toText: (index: number) => string): GridLabel[] {
   const firstSheetSquare = Math.floor(sheetStart / GRID_STEP);
+  const lastSheetSquare = Math.ceil((sheetStart + sheetLength) / GRID_STEP) - 1;
+  const first = Math.max(Math.floor(viewStart / GRID_STEP), firstSheetSquare);
+  const last = Math.min(Math.ceil((viewStart + viewLength) / GRID_STEP) - 1, lastSheetSquare);
   return Array.from({ length: Math.max(last - first + 1, 0) }, (_, i) => first + i)
     .map((square) => {
       const visibleStart = Math.max(square * GRID_STEP, viewStart);
@@ -45,9 +46,9 @@ export function MapCollar({ bounds, viewport, zoom, sheetScale }: {
   const half = (COLLAR * sheetScale) / 2;
   const maxX = bounds.minX + bounds.width;
   const maxY = bounds.minY + bounds.height;
-  const columns = gridLabels(bounds.minX, viewport.x, viewport.width, zoom, fontSize * 1.5,
+  const columns = gridLabels(bounds.minX, bounds.width, viewport.x, viewport.width, zoom, fontSize * 1.5,
     (index) => COLUMN_LETTERS[index] ?? "");
-  const rows = gridLabels(bounds.minY, viewport.y, viewportHeight(viewport, bounds), zoom, fontSize * 1.5,
+  const rows = gridLabels(bounds.minY, bounds.height, viewport.y, viewportHeight(viewport, bounds), zoom, fontSize * 1.5,
     (index) => String(index + 1));
   const label = { fontSize, fill: MAP_COLORS.inkSoft, textAnchor: "middle" as const, dominantBaseline: "central" as const };
 
@@ -91,7 +92,7 @@ export function MapFooter({ bounds, zoom, sheetScale }: { bounds: Bounds; zoom: 
     <g>
       <rect x={x} width={length / 2} fill={MAP_COLORS.ink} {...segment} />
       <rect x={x + length / 2} width={length / 2} fill={MAP_COLORS.sheet} {...segment} />
-      {[0, worldLength / 2, worldLength].map((value) => (
+      {[0, worldLength / 2, worldLength].filter(Number.isInteger).map((value) => (
         <text key={value} x={x + value * zoom} y={baseline - 1.5 * sheetScale} fontSize={fontSize} textAnchor="middle"
               fill={MAP_COLORS.ink}>
           {value}

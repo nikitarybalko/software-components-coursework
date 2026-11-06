@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, type PointerEvent } fro
 import type { Trails } from "@/hooks/useUnitTrails";
 import { MAP_COLORS, cn } from "@/lib/presentation";
 import type { Battlefield, Point } from "@/lib/types";
-import { WORLD_WIDTH, sheetBounds, type Bounds, type Viewport } from "./geometry";
+import { OFF_SHEET_EXTENT, WORLD_WIDTH, sheetBounds, type Bounds, type Viewport } from "./geometry";
 import { COLLAR, FOOTER, MapCollar, MapFooter } from "./MapFrame";
 import { GridLines, SceneLayers, buildScene, type ViewMode } from "./MapLayers";
 import { WHEEL_ZOOM_STEP, useMapViewport } from "./useMapViewport";
@@ -152,7 +152,12 @@ export function BattlefieldMap({ battlefield, trails, viewMode, hint }: Battlefi
           <rect x={bounds.minX} y={bounds.minY} width={bounds.width} height={bounds.height} fill={MAP_COLORS.sheet} />
           <g clipPath={`url(#${id}-sheet)`}>
             <g transform={worldTransform(bounds, viewport, zoom)}>
+              <rect x={bounds.minX - OFF_SHEET_EXTENT} y={bounds.minY - OFF_SHEET_EXTENT} width={bounds.width + OFF_SHEET_EXTENT * 2}
+                    height={bounds.height + OFF_SHEET_EXTENT * 2} fill={MAP_COLORS.paper} />
+              <rect x={bounds.minX} y={bounds.minY} width={bounds.width} height={bounds.height} fill={MAP_COLORS.sheet} />
               <GridLines bounds={bounds} />
+              <rect x={bounds.minX} y={bounds.minY} width={bounds.width} height={bounds.height} fill="none"
+                    stroke={MAP_COLORS.inkSoft} vectorEffect="non-scaling-stroke" />
               {scene && (
                 <SceneLayers scene={scene} trails={trails} bounds={bounds} zoom={zoom} markerSize={markerSize} fogId={id} />
               )}

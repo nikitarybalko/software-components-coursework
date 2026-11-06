@@ -6,6 +6,10 @@ export const WORLD_HEIGHT = 200;
 export const GRID_STEP = 25;
 export const MAX_ZOOM = 8;
 export const FIT_PADDING = 20;
+/** Share of the visible width a zoomed-in view may be panned past the sheet edge, so edge units are not glued to the frame. */
+export const PAN_MARGIN_RATIO = 0.15;
+/** Extent of the off-sheet backdrop; larger than any pan margin the ratio can produce. */
+export const OFF_SHEET_EXTENT = 25;
 
 export interface Bounds {
   minX: number;
@@ -55,13 +59,19 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+/** Pan margin follows the visible width and fades out towards the whole-sheet view. */
+function panMargin(width: number, bounds: Bounds) {
+  return PAN_MARGIN_RATIO * width * (1 - width / bounds.width);
+}
+
 export function clampViewport(viewport: Viewport, bounds: Bounds): Viewport {
   const width = clamp(viewport.width, bounds.width / MAX_ZOOM, bounds.width);
   const height = viewportHeight({ ...viewport, width }, bounds);
+  const margin = panMargin(width, bounds);
   return {
     width,
-    x: clamp(viewport.x, bounds.minX, bounds.minX + bounds.width - width),
-    y: clamp(viewport.y, bounds.minY, bounds.minY + bounds.height - height),
+    x: clamp(viewport.x, bounds.minX - margin, bounds.minX + bounds.width - width + margin),
+    y: clamp(viewport.y, bounds.minY - margin, bounds.minY + bounds.height - height + margin),
   };
 }
 
