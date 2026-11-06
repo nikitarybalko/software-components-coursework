@@ -26,6 +26,8 @@ import java.util.UUID;
 @Builder
 public class EventLogEntity {
 
+    public static final int MAX_MESSAGE_LENGTH = 1000;
+
     @Id
     private UUID id;
 
@@ -39,6 +41,6 @@ public class EventLogEntity {
     @Enumerated(EnumType.STRING)
     private Side side;
 
-    @Column(nullable = false, length = 1000)
+    @Column(nullable = false, length = MAX_MESSAGE_LENGTH)
     private String message;
 }

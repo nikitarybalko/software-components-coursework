@@ -1,6 +1,7 @@
 package com.nikitarybalko.wargamebroker.web.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nikitarybalko.wargamebroker.config.ApiKeyProperties;
 import com.nikitarybalko.wargamebroker.domain.model.Side;
 import com.nikitarybalko.wargamebroker.web.dto.ErrorResponse;
 import jakarta.servlet.FilterChain;
@@ -8,7 +9,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @Slf4j
@@ -27,26 +30,24 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
     public static final String ATTR_CLIENT_ROLE = "ATTR_CLIENT_ROLE";
     public static final String ATTR_CLIENT_SIDE = "ATTR_CLIENT_SIDE";
 
-    private final String blueApiKey;
-    private final String redApiKey;
-    private final String adminApiKey;
+    private static final List<String> PUBLIC_PATH_PREFIXES = List.of("/swagger-ui", "/v3/api-docs", "/error", "/favicon.ico");
+    private static final String MISSING_KEY_MESSAGE = "Missing required " + API_KEY_HEADER + " header";
+    private static final String INVALID_KEY_MESSAGE = "Invalid " + API_KEY_HEADER + " provided";
+
+    private final Map<String, ClientRole> rolesByApiKey;
     private final ObjectMapper objectMapper;
 
-    public ApiKeyAuthFilter(
-            @Value("${wargame.security.blue-api-key:blue-secret-token}") String blueApiKey,
-            @Value("${wargame.security.red-api-key:red-secret-token}") String redApiKey,
-            @Value("${wargame.security.admin-api-key:admin-secret-token}") String adminApiKey,
-            ObjectMapper objectMapper) {
-        this.blueApiKey = blueApiKey;
-        this.redApiKey = redApiKey;
-        this.adminApiKey = adminApiKey;
+    public ApiKeyAuthFilter(ApiKeyProperties apiKeys, ObjectMapper objectMapper) {
+        this.rolesByApiKey = Map.of(
+                apiKeys.blueApiKey(), ClientRole.ROLE_BLUE,
+                apiKeys.redApiKey(), ClientRole.ROLE_RED,
+                apiKeys.adminApiKey(), ClientRole.ROLE_ADMIN);
         this.objectMapper = objectMapper;
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return isWhitelisted(path) || "OPTIONS".equalsIgnoreCase(request.getMethod());
+        return isPublicPath(request.getRequestURI()) || HttpMethod.OPTIONS.matches(request.getMethod());
     }
 
     @Override
@@ -56,18 +57,18 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
         String apiKey = request.getHeader(API_KEY_HEADER);
 
         if (Objects.isNull(apiKey) || apiKey.isBlank()) {
-            respondUnauthorized(response, "Missing required X-API-KEY header");
+            respondUnauthorized(response, MISSING_KEY_MESSAGE);
             return;
         }
 
-        ClientRole clientRole = resolveRole(apiKey.trim());
+        ClientRole clientRole = rolesByApiKey.get(apiKey.trim());
         if (Objects.isNull(clientRole)) {
-            respondUnauthorized(response, "Invalid X-API-KEY provided");
+            respondUnauthorized(response, INVALID_KEY_MESSAGE);
             return;
         }
 
-        Side clientSide = resolveSide(clientRole);
         request.setAttribute(ATTR_CLIENT_ROLE, clientRole);
+        Side clientSide = resolveSide(clientRole);
         if (Objects.nonNull(clientSide)) {
             request.setAttribute(ATTR_CLIENT_SIDE, clientSide);
         }
@@ -75,25 +76,8 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private boolean isWhitelisted(String path) {
-        return path.startsWith("/swagger-ui")
-                || path.startsWith("/v3/api-docs")
-                || path.equals("/swagger-ui.html")
-                || path.equals("/error")
-                || path.equals("/favicon.ico");
-    }
-
-    private ClientRole resolveRole(String apiKey) {
-        if (apiKey.equals(adminApiKey)) {
-            return ClientRole.ROLE_ADMIN;
-        }
-        if (apiKey.equals(blueApiKey)) {
-            return ClientRole.ROLE_BLUE;
-        }
-        if (apiKey.equals(redApiKey)) {
-            return ClientRole.ROLE_RED;
-        }
-        return null;
+    private boolean isPublicPath(String path) {
+        return PUBLIC_PATH_PREFIXES.stream().anyMatch(path::startsWith);
     }
 
     private Side resolveSide(ClientRole role) {

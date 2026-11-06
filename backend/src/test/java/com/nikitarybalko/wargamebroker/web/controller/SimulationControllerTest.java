@@ -7,6 +7,9 @@ import com.nikitarybalko.wargamebroker.domain.service.SimulationSessionService;
 import com.nikitarybalko.wargamebroker.domain.service.SimulatorRegistry;
 import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
 import com.nikitarybalko.wargamebroker.domain.service.TickManager;
+import com.nikitarybalko.wargamebroker.support.TestApiKeys;
+import com.nikitarybalko.wargamebroker.support.TestEndpoints;
+import com.nikitarybalko.wargamebroker.support.TestProfiles;
 import com.nikitarybalko.wargamebroker.web.dto.PauseRequest;
 import com.nikitarybalko.wargamebroker.web.mapper.SimulationStatusMapper;
 import com.nikitarybalko.wargamebroker.web.security.ApiKeyAuthFilter;
@@ -25,6 +28,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.UUID;
 
+import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.CURRENT_TICK;
+import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.STATUS;
+import static com.nikitarybalko.wargamebroker.support.TestSimulationSettings.FIRST_TICK;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -36,9 +42,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(SimulationController.class)
 @Import(SimulationStatusMapper.class)
-@ActiveProfiles("test")
+@ActiveProfiles(TestProfiles.TEST)
 @DisplayName("Web tests: SimulationController")
 class SimulationControllerTest {
+
+    private static final long ONGOING_TICK = 4;
+    private static final long TICK_AFTER_RESTORE = 6;
+
+    private static final String PAUSE_REASON = "Tactical review";
 
     @Autowired
     private MockMvc mockMvc;
@@ -58,20 +69,18 @@ class SimulationControllerTest {
     @MockitoBean
     private StateCheckpointingService checkpointingService;
 
-    private static final String ADMIN_KEY = "admin-secret-token";
-    private static final String BLUE_KEY = "blue-secret-token";
 
     @Test
     @DisplayName("Init simulation endpoint initializes session and returns 200")
     void testInitSimulation() throws Exception {
         when(tickManager.getStatus()).thenReturn(SimulationStatus.ACTIVE);
-        when(tickManager.getCurrentTick()).thenReturn(1L);
+        when(tickManager.getCurrentTick()).thenReturn(FIRST_TICK);
 
-        mockMvc.perform(post("/api/v1/simulation/init")
-                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+        mockMvc.perform(post(TestEndpoints.INIT)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.ADMIN))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ACTIVE"))
-                .andExpect(jsonPath("$.currentTick").value(1));
+                .andExpect(jsonPath(STATUS).value(SimulationStatus.ACTIVE.name()))
+                .andExpect(jsonPath(CURRENT_TICK).value(FIRST_TICK));
 
         verify(sessionService).initSimulation();
     }
@@ -80,12 +89,12 @@ class SimulationControllerTest {
     @DisplayName("Reset simulation endpoint resets session and returns 200")
     void testResetSimulation() throws Exception {
         when(tickManager.getStatus()).thenReturn(SimulationStatus.INITIALIZING);
-        when(tickManager.getCurrentTick()).thenReturn(1L);
+        when(tickManager.getCurrentTick()).thenReturn(FIRST_TICK);
 
-        mockMvc.perform(post("/api/v1/simulation/reset")
-                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+        mockMvc.perform(post(TestEndpoints.RESET)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.ADMIN))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("INITIALIZING"));
+                .andExpect(jsonPath(STATUS).value(SimulationStatus.INITIALIZING.name()));
 
         verify(sessionService).resetSimulation();
     }
@@ -94,16 +103,16 @@ class SimulationControllerTest {
     @DisplayName("Pause simulation endpoint pauses session with reason")
     void testPauseSimulation() throws Exception {
         when(tickManager.getStatus()).thenReturn(SimulationStatus.PAUSED);
-        PauseRequest request = PauseRequest.builder().reason("Testing pause").build();
+        PauseRequest request = PauseRequest.builder().reason(PAUSE_REASON).build();
 
-        mockMvc.perform(post("/api/v1/simulation/pause")
-                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY)
+        mockMvc.perform(post(TestEndpoints.PAUSE)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.ADMIN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("PAUSED"));
+                .andExpect(jsonPath(STATUS).value(SimulationStatus.PAUSED.name()));
 
-        verify(sessionService).pauseSimulation("Testing pause");
+        verify(sessionService).pauseSimulation(PAUSE_REASON);
     }
 
     @Test
@@ -111,10 +120,10 @@ class SimulationControllerTest {
     void testResumeSimulation() throws Exception {
         when(tickManager.getStatus()).thenReturn(SimulationStatus.ACTIVE);
 
-        mockMvc.perform(post("/api/v1/simulation/resume")
-                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+        mockMvc.perform(post(TestEndpoints.RESUME)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.ADMIN))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ACTIVE"));
+                .andExpect(jsonPath(STATUS).value(SimulationStatus.ACTIVE.name()));
 
         verify(sessionService).resumeSimulation();
     }
@@ -124,13 +133,13 @@ class SimulationControllerTest {
     void testRestoreFromSnapshot() throws Exception {
         UUID snapshotId = UUID.randomUUID();
         when(tickManager.getStatus()).thenReturn(SimulationStatus.PAUSED);
-        when(tickManager.getCurrentTick()).thenReturn(6L);
+        when(tickManager.getCurrentTick()).thenReturn(TICK_AFTER_RESTORE);
 
-        mockMvc.perform(post("/api/v1/simulation/restore/" + snapshotId)
-                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+        mockMvc.perform(post(TestEndpoints.restore(snapshotId))
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.ADMIN))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("PAUSED"))
-                .andExpect(jsonPath("$.currentTick").value(6));
+                .andExpect(jsonPath(STATUS).value(SimulationStatus.PAUSED.name()))
+                .andExpect(jsonPath(CURRENT_TICK).value(TICK_AFTER_RESTORE));
 
         verify(sessionService).restoreFromSnapshot(snapshotId);
     }
@@ -139,21 +148,22 @@ class SimulationControllerTest {
     @DisplayName("Status endpoint returns current simulation status")
     void testGetStatus() throws Exception {
         when(tickManager.getStatus()).thenReturn(SimulationStatus.ACTIVE);
-        when(tickManager.getCurrentTick()).thenReturn(4L);
+        when(tickManager.getCurrentTick()).thenReturn(ONGOING_TICK);
 
-        mockMvc.perform(get("/api/v1/simulation/status")
-                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+        mockMvc.perform(get(TestEndpoints.STATUS)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.ADMIN))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ACTIVE"))
-                .andExpect(jsonPath("$.currentTick").value(4));
+                .andExpect(jsonPath(STATUS).value(SimulationStatus.ACTIVE.name()))
+                .andExpect(jsonPath(CURRENT_TICK).value(ONGOING_TICK));
     }
 
     @Test
     @DisplayName("Lifecycle endpoints return 403 for force API keys")
     void testLifecycleEndpointsForbiddenForForceKeys() throws Exception {
-        for (String action : List.of("init", "reset", "pause", "resume", "restore/" + UUID.randomUUID())) {
-            mockMvc.perform(post("/api/v1/simulation/" + action)
-                            .header(ApiKeyAuthFilter.API_KEY_HEADER, BLUE_KEY))
+        for (String endpoint : List.of(TestEndpoints.INIT, TestEndpoints.RESET, TestEndpoints.PAUSE,
+                TestEndpoints.RESUME, TestEndpoints.restore(UUID.randomUUID()))) {
+            mockMvc.perform(post(endpoint)
+                            .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.BLUE))
                     .andExpect(status().isForbidden());
         }
         verifyNoInteractions(sessionService);
@@ -164,10 +174,10 @@ class SimulationControllerTest {
     void testStatusAvailableForForceKeys() throws Exception {
         when(tickManager.getStatus()).thenReturn(SimulationStatus.ACTIVE);
 
-        mockMvc.perform(get("/api/v1/simulation/status")
-                        .header(ApiKeyAuthFilter.API_KEY_HEADER, BLUE_KEY))
+        mockMvc.perform(get(TestEndpoints.STATUS)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.BLUE))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ACTIVE"));
+                .andExpect(jsonPath(STATUS).value(SimulationStatus.ACTIVE.name()));
     }
 
     @Test
@@ -176,8 +186,8 @@ class SimulationControllerTest {
         doThrow(new InvalidLifecycleTransitionException("resume", SimulationStatus.ACTIVE))
                 .when(sessionService).resumeSimulation();
 
-        mockMvc.perform(post("/api/v1/simulation/resume")
-                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+        mockMvc.perform(post(TestEndpoints.RESUME)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.ADMIN))
                 .andExpect(status().isConflict());
     }
 
@@ -187,8 +197,8 @@ class SimulationControllerTest {
         UUID snapshotId = UUID.randomUUID();
         doThrow(new SnapshotNotFoundException(snapshotId)).when(sessionService).restoreFromSnapshot(snapshotId);
 
-        mockMvc.perform(post("/api/v1/simulation/restore/" + snapshotId)
-                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+        mockMvc.perform(post(TestEndpoints.restore(snapshotId))
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.ADMIN))
                 .andExpect(status().isNotFound());
     }
 }

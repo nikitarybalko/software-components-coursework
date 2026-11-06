@@ -12,6 +12,10 @@ import java.util.UUID;
 
 public interface StateCheckpointingService {
 
+    int RECENT_SNAPSHOTS_LIMIT = 50;
+
+    int RECENT_EVENTS_LIMIT = 200;
+
     void checkAndSaveSnapshot(long tickNumber, List<UnitState> units);
 
     void recordEvent(EventType type, Side side, String message);

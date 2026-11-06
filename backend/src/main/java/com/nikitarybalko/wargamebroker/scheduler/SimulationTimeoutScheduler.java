@@ -17,7 +17,7 @@ public class SimulationTimeoutScheduler {
 
     private final TickManager tickManager;
 
-    @Scheduled(fixedRateString = "${wargame.simulation.timeout-check-interval-ms:1000}")
+    @Scheduled(fixedRateString = "${wargame.simulation.timeout-check-interval-ms}")
     public void monitorTickTimeouts() {
         tickManager.checkTimeouts();
     }

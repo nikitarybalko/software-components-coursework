@@ -1,11 +1,5 @@
 package com.nikitarybalko.wargamebroker.domain.service.impl;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import com.nikitarybalko.wargamebroker.domain.exception.InvalidLifecycleTransitionException;
 import com.nikitarybalko.wargamebroker.domain.exception.SimulationException;
 import com.nikitarybalko.wargamebroker.domain.model.EventType;
@@ -19,11 +13,19 @@ import com.nikitarybalko.wargamebroker.domain.service.SimulatorRegistry;
 import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
 import com.nikitarybalko.wargamebroker.domain.service.TickManager;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.nikitarybalko.wargamebroker.support.TestUnitIds.BLUE_UNIT;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -31,6 +33,9 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Unit tests: Simulation Session Lifecycle (SimulationSessionService)")
 class SimulationSessionServiceTest {
+
+    private static final String PAUSE_REASON = "Tactical review";
+    private static final long SNAPSHOT_TICK = 5;
 
     @Mock
     private TickManager tickManager;
@@ -63,9 +68,9 @@ class SimulationSessionServiceTest {
     void testPauseAndResumeSimulation() {
         when(tickManager.getStatus()).thenReturn(SimulationStatus.ACTIVE, SimulationStatus.PAUSED);
 
-        sessionService.pauseSimulation("Test reason");
+        sessionService.pauseSimulation(PAUSE_REASON);
         verify(tickManager).setStatus(SimulationStatus.PAUSED);
-        verify(checkpointingService).recordEvent(eq(EventType.SIMULATION_PAUSED), isNull(), eq("Test reason"));
+        verify(checkpointingService).recordEvent(eq(EventType.SIMULATION_PAUSED), isNull(), eq(PAUSE_REASON));
 
         sessionService.resumeSimulation();
         verify(tickManager).setStatus(SimulationStatus.ACTIVE);
@@ -116,14 +121,14 @@ class SimulationSessionServiceTest {
     @DisplayName("restoreFromSnapshot restores state and records event")
     void testRestoreFromSnapshot() {
         UUID snapshotId = UUID.randomUUID();
-        UnitState u = new UnitState("u1", Side.BLUE, 10.0, 10.0, 20.0, UnitStatus.HEALTHY);
-        Snapshot snapshot = new Snapshot(snapshotId, 5L, Instant.now(), List.of(u));
+        UnitState u = new UnitState(BLUE_UNIT, Side.BLUE, 10.0, 10.0, 20.0, UnitStatus.HEALTHY);
+        Snapshot snapshot = new Snapshot(snapshotId, SNAPSHOT_TICK, Instant.now(), List.of(u));
 
         when(checkpointingService.loadSnapshot(snapshotId)).thenReturn(Optional.of(snapshot));
 
         sessionService.restoreFromSnapshot(snapshotId);
 
-        verify(tickManager).restoreState(eq(5L), eq(List.of(u)));
+        verify(tickManager).restoreState(eq(SNAPSHOT_TICK), eq(List.of(u)));
         verify(checkpointingService).recordEvent(eq(EventType.SNAPSHOT_RESTORED), isNull(), anyString());
     }
 

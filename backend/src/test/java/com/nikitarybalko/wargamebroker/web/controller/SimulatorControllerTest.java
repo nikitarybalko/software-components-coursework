@@ -5,6 +5,9 @@ import com.nikitarybalko.wargamebroker.domain.service.SimulationSessionService;
 import com.nikitarybalko.wargamebroker.domain.service.SimulatorRegistry;
 import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
 import com.nikitarybalko.wargamebroker.domain.service.TickManager;
+import com.nikitarybalko.wargamebroker.support.TestApiKeys;
+import com.nikitarybalko.wargamebroker.support.TestEndpoints;
+import com.nikitarybalko.wargamebroker.support.TestProfiles;
 import com.nikitarybalko.wargamebroker.web.mapper.SimulationStatusMapper;
 import com.nikitarybalko.wargamebroker.web.security.ApiKeyAuthFilter;
 
@@ -24,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(SimulatorController.class)
 @Import(SimulationStatusMapper.class)
-@ActiveProfiles("test")
+@ActiveProfiles(TestProfiles.TEST)
 @DisplayName("Web tests: SimulatorController")
 class SimulatorControllerTest {
 
@@ -46,8 +49,8 @@ class SimulatorControllerTest {
     @Test
     @DisplayName("Blue force key registers the Blue simulator")
     void registerBlueSimulator() throws Exception {
-        mockMvc.perform(post("/api/v1/simulators/register")
-                        .header(ApiKeyAuthFilter.API_KEY_HEADER, "blue-secret-token"))
+        mockMvc.perform(post(TestEndpoints.REGISTER)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.BLUE))
                 .andExpect(status().isOk());
 
         verify(sessionService).registerSimulator(Side.BLUE);
@@ -56,8 +59,8 @@ class SimulatorControllerTest {
     @Test
     @DisplayName("Red force key registers the Red simulator")
     void registerRedSimulator() throws Exception {
-        mockMvc.perform(post("/api/v1/simulators/register")
-                        .header(ApiKeyAuthFilter.API_KEY_HEADER, "red-secret-token"))
+        mockMvc.perform(post(TestEndpoints.REGISTER)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.RED))
                 .andExpect(status().isOk());
 
         verify(sessionService).registerSimulator(Side.RED);
@@ -66,8 +69,8 @@ class SimulatorControllerTest {
     @Test
     @DisplayName("Admin key cannot register a simulator")
     void registerWithAdminKeyIsForbidden() throws Exception {
-        mockMvc.perform(post("/api/v1/simulators/register")
-                        .header(ApiKeyAuthFilter.API_KEY_HEADER, "admin-secret-token"))
+        mockMvc.perform(post(TestEndpoints.REGISTER)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.ADMIN))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(sessionService);

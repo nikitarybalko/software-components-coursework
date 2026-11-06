@@ -11,6 +11,9 @@ import java.util.Objects;
 @EqualsAndHashCode
 public class UnitState {
 
+    public static final double DAMAGED_VIEW_RADIUS_FACTOR = 0.5;
+    public static final double NO_VISION_RADIUS = 0.0;
+
     private final String id;
     private final Side side;
     private final double x;
@@ -23,26 +26,28 @@ public class UnitState {
         this.side = Objects.requireNonNull(side, "Side must not be null");
         this.x = x;
         this.y = y;
-        this.viewRadius = Math.max(0.0, viewRadius);
-        this.status = status != null ? status : UnitStatus.HEALTHY;
+        this.viewRadius = Math.max(NO_VISION_RADIUS, viewRadius);
+        this.status = Objects.isNull(status) ? UnitStatus.HEALTHY : status;
     }
 
     public double getEffectiveViewRadius() {
         return switch (status) {
             case HEALTHY -> viewRadius;
-            case DAMAGED -> viewRadius * 0.5;
-            case DESTROYED -> 0.0;
+            case DAMAGED -> viewRadius * DAMAGED_VIEW_RADIUS_FACTOR;
+            case DESTROYED -> NO_VISION_RADIUS;
         };
     }
 
     public double distanceTo(UnitState other) {
         Objects.requireNonNull(other, "Target unit must not be null");
-        double dx = this.x - other.x;
-        double dy = this.y - other.y;
-        return Math.sqrt(dx * dx + dy * dy);
+        return Math.hypot(this.x - other.x, this.y - other.y);
     }
 
     public boolean isOperational() {
         return status != UnitStatus.DESTROYED;
+    }
+
+    public boolean canObserve() {
+        return isOperational() && getEffectiveViewRadius() > NO_VISION_RADIUS;
     }
 }

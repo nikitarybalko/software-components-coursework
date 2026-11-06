@@ -1,6 +1,8 @@
 package com.nikitarybalko.wargamebroker.web.controller;
 
+import com.nikitarybalko.wargamebroker.config.OpenApiConfig;
 import com.nikitarybalko.wargamebroker.domain.service.SimulationSessionService;
+import com.nikitarybalko.wargamebroker.web.ApiPaths;
 import com.nikitarybalko.wargamebroker.web.dto.SimulationStatusResponse;
 import com.nikitarybalko.wargamebroker.web.mapper.SimulationStatusMapper;
 import com.nikitarybalko.wargamebroker.web.security.ClientRole;
@@ -19,10 +21,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/simulators")
+@RequestMapping(ApiPaths.SIMULATORS)
 @RequiredArgsConstructor
 @Tag(name = "Simulator Registration", description = "Registration of Blue Force and Red Force simulators")
-@SecurityRequirement(name = "ApiKeyAuth")
+@SecurityRequirement(name = OpenApiConfig.SECURITY_SCHEME_NAME)
 public class SimulatorController {
 
     private final SimulationSessionService sessionService;
@@ -31,9 +33,9 @@ public class SimulatorController {
     @Operation(summary = "Register simulator of the authenticated side",
             description = "Registers the simulator identified by its X-API-KEY. Unit submissions are accepted only from registered sides. Idempotent.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Simulator registered"),
-            @ApiResponse(responseCode = "401", description = "Missing or invalid API key"),
-            @ApiResponse(responseCode = "403", description = "Only Blue or Red force keys can register")
+            @ApiResponse(responseCode = ApiResponseDocs.OK, description = "Simulator registered"),
+            @ApiResponse(responseCode = ApiResponseDocs.UNAUTHORIZED, description = ApiResponseDocs.INVALID_API_KEY),
+            @ApiResponse(responseCode = ApiResponseDocs.FORBIDDEN, description = "Only Blue or Red force keys can register")
     })
     @PostMapping("/register")
     @RequiresRole({ClientRole.ROLE_BLUE, ClientRole.ROLE_RED})

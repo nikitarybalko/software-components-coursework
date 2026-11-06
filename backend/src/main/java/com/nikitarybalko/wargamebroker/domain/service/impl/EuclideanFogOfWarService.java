@@ -13,7 +13,7 @@ import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 @Service
 public class EuclideanFogOfWarService implements FogOfWarService {
 
-    private static final double EPSILON = 1e-9;
+    private static final double DISTANCE_TOLERANCE = 1e-9;
 
     @Override
     public List<UnitState> calculateVisibleEnemies(List<UnitState> allies, List<UnitState> enemies) {
@@ -37,23 +37,17 @@ public class EuclideanFogOfWarService implements FogOfWarService {
         Objects.requireNonNull(observer, "Observer must not be null");
         Objects.requireNonNull(target, "Target must not be null");
 
-        if (!observer.isOperational()) {
+        if (!observer.canObserve()) {
             return false;
         }
 
-        double effectiveRadius = observer.getEffectiveViewRadius();
-        if (effectiveRadius <= 0.0) {
-            return false;
-        }
-
-        return observer.distanceTo(target) <= effectiveRadius + EPSILON;
+        return observer.distanceTo(target) <= observer.getEffectiveViewRadius() + DISTANCE_TOLERANCE;
     }
 
     private List<UnitState> extractActiveObservers(List<UnitState> allies) {
         return allies.stream()
                 .filter(Objects::nonNull)
-                .filter(UnitState::isOperational)
-                .filter(unit -> unit.getEffectiveViewRadius() > 0.0)
+                .filter(UnitState::canObserve)
                 .toList();
     }
 

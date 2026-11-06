@@ -1,6 +1,7 @@
 package com.nikitarybalko.wargamebroker.infrastructure.persistence;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Limit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,8 @@ import java.util.UUID;
 @Primary
 @RequiredArgsConstructor
 public class JpaStateCheckpointingService implements StateCheckpointingService {
+
+    private static final String TRUNCATION_MARKER = "...";
 
     private final SnapshotRepository snapshotRepository;
     private final EventLogRepository eventLogRepository;
@@ -60,7 +63,7 @@ public class JpaStateCheckpointingService implements StateCheckpointingService {
                 .timestamp(Instant.now())
                 .eventType(type)
                 .side(side)
-                .message(message)
+                .message(fitToColumn(message))
                 .build();
 
         eventLogRepository.save(entity);
@@ -77,7 +80,7 @@ public class JpaStateCheckpointingService implements StateCheckpointingService {
     @Override
     @Transactional(readOnly = true)
     public List<Snapshot> getRecentSnapshots() {
-        return snapshotRepository.findTop50ByOrderByTickNumberDesc().stream()
+        return snapshotRepository.findAllByOrderByTickNumberDesc(Limit.of(RECENT_SNAPSHOTS_LIMIT)).stream()
                 .map(this::toDomainSnapshot)
                 .toList();
     }
@@ -85,7 +88,7 @@ public class JpaStateCheckpointingService implements StateCheckpointingService {
     @Override
     @Transactional(readOnly = true)
     public List<EventLog> getRecentEvents() {
-        return eventLogRepository.findTop200ByOrderByTimestampDesc().stream()
+        return eventLogRepository.findAllByOrderByTimestampDesc(Limit.of(RECENT_EVENTS_LIMIT)).stream()
                 .map(this::toDomainEvent)
                 .toList();
     }
@@ -96,6 +99,13 @@ public class JpaStateCheckpointingService implements StateCheckpointingService {
         snapshotRepository.deleteAll();
         eventLogRepository.deleteAll();
         log.info("Cleared all snapshots and event logs from database");
+    }
+
+    private String fitToColumn(String message) {
+        if (message.length() <= EventLogEntity.MAX_MESSAGE_LENGTH) {
+            return message;
+        }
+        return message.substring(0, EventLogEntity.MAX_MESSAGE_LENGTH - TRUNCATION_MARKER.length()) + TRUNCATION_MARKER;
     }
 
     private List<SnapshotUnitEntity> mapToUnitEntities(List<UnitState> units, SnapshotEntity parent) {

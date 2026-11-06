@@ -1,8 +1,10 @@
 package com.nikitarybalko.wargamebroker.web.controller;
 
+import com.nikitarybalko.wargamebroker.config.OpenApiConfig;
 import com.nikitarybalko.wargamebroker.domain.model.Side;
 import com.nikitarybalko.wargamebroker.domain.model.UnitState;
 import com.nikitarybalko.wargamebroker.domain.service.TickManager;
+import com.nikitarybalko.wargamebroker.web.ApiPaths;
 import com.nikitarybalko.wargamebroker.web.dto.FogOfWarResponse;
 import com.nikitarybalko.wargamebroker.web.dto.OwnUnitsResponse;
 import com.nikitarybalko.wargamebroker.web.dto.SimulationStatusResponse;
@@ -32,10 +34,10 @@ import java.util.List;
 import java.util.Objects;
 
 @RestController
-@RequestMapping("/api/v1/simulation/ticks")
+@RequestMapping(ApiPaths.SIMULATION_TICKS)
 @RequiredArgsConstructor
 @Tag(name = "Tick Management", description = "Endpoints for synchronizing simulation steps and retrieving Fog of War intelligence")
-@SecurityRequirement(name = "ApiKeyAuth")
+@SecurityRequirement(name = OpenApiConfig.SECURITY_SCHEME_NAME)
 public class TickController {
 
     private final TickManager tickManager;
@@ -44,11 +46,11 @@ public class TickController {
     @Operation(summary = "Submit unit states for the current tick",
             description = "Submits unit coordinates and status for the given tick. Requires X-API-KEY corresponding to the force.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Units successfully accepted"),
-            @ApiResponse(responseCode = "400", description = "Invalid payload or wrong tick number"),
-            @ApiResponse(responseCode = "401", description = "Missing or invalid API key"),
-            @ApiResponse(responseCode = "403", description = "Submitting side does not match API key"),
-            @ApiResponse(responseCode = "409", description = "Simulation is not active or the side is not registered")
+            @ApiResponse(responseCode = ApiResponseDocs.OK, description = "Units successfully accepted"),
+            @ApiResponse(responseCode = ApiResponseDocs.BAD_REQUEST, description = "Invalid payload or wrong tick number"),
+            @ApiResponse(responseCode = ApiResponseDocs.UNAUTHORIZED, description = ApiResponseDocs.INVALID_API_KEY),
+            @ApiResponse(responseCode = ApiResponseDocs.FORBIDDEN, description = "Submitting side does not match API key"),
+            @ApiResponse(responseCode = ApiResponseDocs.CONFLICT, description = "Simulation is not active or the side is not registered")
     })
     @PostMapping("/submit")
     public ResponseEntity<SubmitUnitsResponse> submitUnits(
@@ -80,12 +82,12 @@ public class TickController {
     @Operation(summary = "Retrieve Fog of War intelligence for a specific tick",
             description = "Returns list of visible enemy units for the requesting force within observation radius. Responds 409 until both sides submitted the tick.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Intelligence retrieved successfully"),
-            @ApiResponse(responseCode = "401", description = "Missing or invalid API key"),
-            @ApiResponse(responseCode = "400", description = "Admin request without side parameter"),
-            @ApiResponse(responseCode = "403", description = "Forbidden: Cannot access opponent intelligence"),
-            @ApiResponse(responseCode = "404", description = "Tick data was pruned or never existed"),
-            @ApiResponse(responseCode = "409", description = "Tick is not complete yet, retry later")
+            @ApiResponse(responseCode = ApiResponseDocs.OK, description = "Intelligence retrieved successfully"),
+            @ApiResponse(responseCode = ApiResponseDocs.UNAUTHORIZED, description = ApiResponseDocs.INVALID_API_KEY),
+            @ApiResponse(responseCode = ApiResponseDocs.BAD_REQUEST, description = ApiResponseDocs.ADMIN_SIDE_REQUIRED),
+            @ApiResponse(responseCode = ApiResponseDocs.FORBIDDEN, description = "Forbidden: Cannot access opponent intelligence"),
+            @ApiResponse(responseCode = ApiResponseDocs.NOT_FOUND, description = "Tick data was pruned or never existed"),
+            @ApiResponse(responseCode = ApiResponseDocs.CONFLICT, description = "Tick is not complete yet, retry later")
     })
     @GetMapping("/{tickNumber}/fog-of-war")
     public ResponseEntity<FogOfWarResponse> getFogOfWar(
@@ -120,9 +122,9 @@ public class TickController {
             description = "Returns the latest unit states of the requesting force. After a snapshot restore these are the "
                     + "restored states, so simulators call this endpoint whenever the state epoch changes.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Own units retrieved successfully"),
-            @ApiResponse(responseCode = "400", description = "Admin request without side parameter"),
-            @ApiResponse(responseCode = "403", description = "Forbidden: Cannot access opponent units")
+            @ApiResponse(responseCode = ApiResponseDocs.OK, description = "Own units retrieved successfully"),
+            @ApiResponse(responseCode = ApiResponseDocs.BAD_REQUEST, description = ApiResponseDocs.ADMIN_SIDE_REQUIRED),
+            @ApiResponse(responseCode = ApiResponseDocs.FORBIDDEN, description = "Forbidden: Cannot access opponent units")
     })
     @GetMapping("/current/units")
     public ResponseEntity<OwnUnitsResponse> getOwnUnits(

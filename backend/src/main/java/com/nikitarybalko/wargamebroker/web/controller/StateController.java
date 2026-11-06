@@ -1,8 +1,10 @@
 package com.nikitarybalko.wargamebroker.web.controller;
 
+import com.nikitarybalko.wargamebroker.config.OpenApiConfig;
 import com.nikitarybalko.wargamebroker.domain.model.Side;
 import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
 import com.nikitarybalko.wargamebroker.domain.service.TickManager;
+import com.nikitarybalko.wargamebroker.web.ApiPaths;
 import com.nikitarybalko.wargamebroker.web.dto.EventLogDto;
 import com.nikitarybalko.wargamebroker.web.dto.FullBattlefieldResponse;
 import com.nikitarybalko.wargamebroker.web.dto.SnapshotDto;
@@ -21,10 +23,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/simulation/state")
+@RequestMapping(ApiPaths.SIMULATION_STATE)
 @RequiredArgsConstructor
 @Tag(name = "State & History", description = "Admin-only endpoints for inspecting battlefield overview, snapshots and event logs")
-@SecurityRequirement(name = "ApiKeyAuth")
+@SecurityRequirement(name = OpenApiConfig.SECURITY_SCHEME_NAME)
 @RequiresRole(ClientRole.ROLE_ADMIN)
 public class StateController {
 
@@ -65,7 +67,8 @@ public class StateController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Get recent snapshots", description = "Returns up to 50 latest persisted snapshots ordered by tick number descending")
+    @Operation(summary = "Get recent snapshots", description = "Returns up to " + StateCheckpointingService.RECENT_SNAPSHOTS_LIMIT
+            + " latest persisted snapshots ordered by tick number descending")
     @GetMapping("/snapshots")
     public ResponseEntity<List<SnapshotDto>> getSnapshots() {
         List<SnapshotDto> snapshots = checkpointingService.getRecentSnapshots().stream()
@@ -74,7 +77,8 @@ public class StateController {
         return ResponseEntity.ok(snapshots);
     }
 
-    @Operation(summary = "Get recent event logs", description = "Returns up to 200 latest system event logs ordered chronologically descending")
+    @Operation(summary = "Get recent event logs", description = "Returns up to " + StateCheckpointingService.RECENT_EVENTS_LIMIT
+            + " latest system event logs ordered chronologically descending")
     @GetMapping("/events")
     public ResponseEntity<List<EventLogDto>> getEventLogs() {
         List<EventLogDto> events = checkpointingService.getRecentEvents().stream()

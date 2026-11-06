@@ -1,6 +1,8 @@
 package com.nikitarybalko.wargamebroker.web.controller;
 
+import com.nikitarybalko.wargamebroker.config.OpenApiConfig;
 import com.nikitarybalko.wargamebroker.domain.service.SimulationSessionService;
+import com.nikitarybalko.wargamebroker.web.ApiPaths;
 import com.nikitarybalko.wargamebroker.web.dto.PauseRequest;
 import com.nikitarybalko.wargamebroker.web.dto.SimulationStatusResponse;
 import com.nikitarybalko.wargamebroker.web.mapper.SimulationStatusMapper;
@@ -24,10 +26,10 @@ import java.util.Objects;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/simulation")
+@RequestMapping(ApiPaths.SIMULATION)
 @RequiredArgsConstructor
 @Tag(name = "Simulation Lifecycle", description = "Endpoints for controlling the simulation lifecycle (init, pause, resume, reset, restore)")
-@SecurityRequirement(name = "ApiKeyAuth")
+@SecurityRequirement(name = OpenApiConfig.SECURITY_SCHEME_NAME)
 public class SimulationController {
 
     private final SimulationSessionService sessionService;
@@ -53,7 +55,7 @@ public class SimulationController {
     @PostMapping("/pause")
     @RequiresRole(ClientRole.ROLE_ADMIN)
     public ResponseEntity<SimulationStatusResponse> pauseSimulation(@RequestBody(required = false) PauseRequest request) {
-        String reason = Objects.nonNull(request) ? request.getReason() : "Manual pause";
+        String reason = Objects.nonNull(request) ? request.getReason() : null;
         sessionService.pauseSimulation(reason);
         return ResponseEntity.ok(statusMapper.currentStatus());
     }
@@ -68,9 +70,9 @@ public class SimulationController {
 
     @Operation(summary = "Restore state from snapshot", description = "Restores units and tick counter from a persisted snapshot and leaves the simulation PAUSED. Admin only.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Snapshot restored successfully"),
-            @ApiResponse(responseCode = "403", description = "Admin API key required"),
-            @ApiResponse(responseCode = "404", description = "Snapshot not found")
+            @ApiResponse(responseCode = ApiResponseDocs.OK, description = "Snapshot restored successfully"),
+            @ApiResponse(responseCode = ApiResponseDocs.FORBIDDEN, description = ApiResponseDocs.ADMIN_KEY_REQUIRED),
+            @ApiResponse(responseCode = ApiResponseDocs.NOT_FOUND, description = "Snapshot not found")
     })
     @PostMapping("/restore/{snapshotId}")
     @RequiresRole(ClientRole.ROLE_ADMIN)

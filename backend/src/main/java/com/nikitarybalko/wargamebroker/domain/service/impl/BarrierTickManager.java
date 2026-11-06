@@ -14,8 +14,8 @@ import com.nikitarybalko.wargamebroker.domain.service.FogOfWarService;
 import com.nikitarybalko.wargamebroker.domain.service.SimulatorRegistry;
 import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
 import com.nikitarybalko.wargamebroker.domain.service.TickManager;
+import com.nikitarybalko.wargamebroker.config.SimulationProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -37,18 +37,14 @@ import java.util.stream.Stream;
 public class BarrierTickManager implements TickManager {
 
     private static final int MAX_BUFFER_HISTORY = 50;
+    private static final long FIRST_TICK = 1;
 
     private final FogOfWarService fogOfWarService;
     private final StateCheckpointingService checkpointingService;
     private final SimulatorRegistry simulatorRegistry;
+    private final SimulationProperties settings;
 
-    @Value("${wargame.simulation.tick-timeout-ms:10000}")
-    private long tickTimeoutMs;
-
-    @Value("${wargame.simulation.snapshot-interval:5}")
-    private int snapshotInterval;
-
-    private volatile long currentTick = 1;
+    private volatile long currentTick = FIRST_TICK;
     private volatile long epoch = 0;
     private volatile SimulationStatus status = SimulationStatus.INITIALIZING;
     private volatile Instant lastSubmitTime = Instant.now();
@@ -60,10 +56,12 @@ public class BarrierTickManager implements TickManager {
 
     public BarrierTickManager(FogOfWarService fogOfWarService,
                               StateCheckpointingService checkpointingService,
-                              SimulatorRegistry simulatorRegistry) {
+                              SimulatorRegistry simulatorRegistry,
+                              SimulationProperties settings) {
         this.fogOfWarService = fogOfWarService;
         this.checkpointingService = checkpointingService;
         this.simulatorRegistry = simulatorRegistry;
+        this.settings = settings;
     }
 
     @Override
@@ -142,7 +140,7 @@ public class BarrierTickManager implements TickManager {
         }
 
         long elapsed = Duration.between(lastSubmitTime, Instant.now()).toMillis();
-        if (elapsed > tickTimeoutMs) {
+        if (elapsed > settings.tickTimeoutMs()) {
             pauseDueToTimeout(findSilentSides(), elapsed);
         }
     }
@@ -170,7 +168,7 @@ public class BarrierTickManager implements TickManager {
     }
 
     private void clearState() {
-        currentTick = 1;
+        currentTick = FIRST_TICK;
         status = SimulationStatus.INITIALIZING;
         lastSubmitTime = Instant.now();
         Stream.of(submissions, visibleEnemies)
@@ -257,7 +255,7 @@ public class BarrierTickManager implements TickManager {
     }
 
     private void createSnapshotIfRequired(long tickNumber, List<UnitState> blues, List<UnitState> reds) {
-        if (tickNumber % snapshotInterval == 0) {
+        if (tickNumber % settings.snapshotInterval() == 0) {
             List<UnitState> allUnits = Stream.concat(blues.stream(), reds.stream()).toList();
             checkpointingService.checkAndSaveSnapshot(tickNumber, allUnits);
         }

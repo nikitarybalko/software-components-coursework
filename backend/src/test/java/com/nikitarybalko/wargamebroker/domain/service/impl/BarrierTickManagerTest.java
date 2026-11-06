@@ -1,12 +1,5 @@
 package com.nikitarybalko.wargamebroker.domain.service.impl;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 import com.nikitarybalko.wargamebroker.domain.exception.InvalidTickException;
 import com.nikitarybalko.wargamebroker.domain.exception.SimulationNotActiveException;
 import com.nikitarybalko.wargamebroker.domain.exception.SimulatorNotRegisteredException;
@@ -19,11 +12,26 @@ import com.nikitarybalko.wargamebroker.domain.model.UnitState;
 import com.nikitarybalko.wargamebroker.domain.model.UnitStatus;
 import com.nikitarybalko.wargamebroker.domain.service.FogOfWarService;
 import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
+import com.nikitarybalko.wargamebroker.support.TestSimulationSettings;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
+import static com.nikitarybalko.wargamebroker.support.TestSimulationSettings.EXPIRED_SUBMISSION_AGE_MS;
+import static com.nikitarybalko.wargamebroker.support.TestSimulationSettings.FIRST_TICK;
+import static com.nikitarybalko.wargamebroker.support.TestSimulationSettings.SECOND_TICK;
+import static com.nikitarybalko.wargamebroker.support.TestSimulationSettings.SNAPSHOT_INTERVAL;
+import static com.nikitarybalko.wargamebroker.support.TestUnitIds.BLUE_UNIT;
+import static com.nikitarybalko.wargamebroker.support.TestUnitIds.RED_UNIT;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -31,6 +39,13 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Unit tests: Barrier Tick Synchronization (BarrierTickManager)")
 class BarrierTickManagerTest {
+
+    private static final String LAST_SUBMIT_TIME_FIELD = "lastSubmitTime";
+    private static final double ANY_VIEW_RADIUS = 10.0;
+    private static final long NON_CURRENT_TICK = 99;
+    private static final long FUTURE_TICK = 5;
+    private static final long RESTORED_SNAPSHOT_TICK = 10;
+    private static final long PRUNED_TICK = 3;
 
     @Mock
     private FogOfWarService fogOfWarService;
@@ -47,38 +62,37 @@ class BarrierTickManagerTest {
         simulatorRegistry = new InMemorySimulatorRegistry();
         simulatorRegistry.register(Side.BLUE);
         simulatorRegistry.register(Side.RED);
-        tickManager = new BarrierTickManager(fogOfWarService, checkpointingService, simulatorRegistry);
-        ReflectionTestUtils.setField(tickManager, "tickTimeoutMs", 1000L);
-        ReflectionTestUtils.setField(tickManager, "snapshotInterval", 2);
+        tickManager = new BarrierTickManager(fogOfWarService, checkpointingService, simulatorRegistry,
+                TestSimulationSettings.properties());
     }
 
     @Test
     @DisplayName("Submitting in non-active status throws SimulationNotActiveException")
     void testSubmitWhenNotActiveThrowsException() {
-        UnitState blue = new UnitState("b1", Side.BLUE, 0.0, 0.0, 10.0, UnitStatus.HEALTHY);
+        UnitState blue = new UnitState(BLUE_UNIT, Side.BLUE, 0.0, 0.0, ANY_VIEW_RADIUS, UnitStatus.HEALTHY);
 
         assertThrows(SimulationNotActiveException.class, () ->
-                tickManager.submitUnits(Side.BLUE, 1, List.of(blue)));
+                tickManager.submitUnits(Side.BLUE, FIRST_TICK, List.of(blue)));
     }
 
     @Test
     @DisplayName("Submitting invalid tick number throws InvalidTickException")
     void testSubmitInvalidTickThrowsException() {
         tickManager.setStatus(SimulationStatus.ACTIVE);
-        UnitState blue = new UnitState("b1", Side.BLUE, 0.0, 0.0, 10.0, UnitStatus.HEALTHY);
+        UnitState blue = new UnitState(BLUE_UNIT, Side.BLUE, 0.0, 0.0, ANY_VIEW_RADIUS, UnitStatus.HEALTHY);
 
         assertThrows(InvalidTickException.class, () ->
-                tickManager.submitUnits(Side.BLUE, 99, List.of(blue)));
+                tickManager.submitUnits(Side.BLUE, NON_CURRENT_TICK, List.of(blue)));
     }
 
     @Test
     @DisplayName("Submitting mismatched side unit throws IllegalArgumentException")
     void testSubmitMismatchedSideUnitThrowsException() {
         tickManager.setStatus(SimulationStatus.ACTIVE);
-        UnitState redUnitSentByBlue = new UnitState("r1", Side.RED, 0.0, 0.0, 10.0, UnitStatus.HEALTHY);
+        UnitState redUnitSentByBlue = new UnitState(RED_UNIT, Side.RED, 0.0, 0.0, ANY_VIEW_RADIUS, UnitStatus.HEALTHY);
 
         assertThrows(IllegalArgumentException.class, () ->
-                tickManager.submitUnits(Side.BLUE, 1, List.of(redUnitSentByBlue)));
+                tickManager.submitUnits(Side.BLUE, FIRST_TICK, List.of(redUnitSentByBlue)));
     }
 
     @Test
@@ -86,32 +100,28 @@ class BarrierTickManagerTest {
     void testBarrierSynchronizationFlow() {
         tickManager.setStatus(SimulationStatus.ACTIVE);
 
-        UnitState blue = new UnitState("b1", Side.BLUE, 0.0, 0.0, 50.0, UnitStatus.HEALTHY);
-        UnitState red = new UnitState("r1", Side.RED, 30.0, 0.0, 50.0, UnitStatus.HEALTHY);
+        UnitState blue = new UnitState(BLUE_UNIT, Side.BLUE, 0.0, 0.0, 50.0, UnitStatus.HEALTHY);
+        UnitState red = new UnitState(RED_UNIT, Side.RED, 30.0, 0.0, 50.0, UnitStatus.HEALTHY);
 
         when(fogOfWarService.calculateVisibleEnemies(anyList(), anyList()))
                 .thenReturn(List.of(red))
                 .thenReturn(List.of(blue));
 
-        // 1. Blue submits
-        tickManager.submitUnits(Side.BLUE, 1, List.of(blue));
+        tickManager.submitUnits(Side.BLUE, FIRST_TICK, List.of(blue));
 
-        assertEquals(1, tickManager.getCurrentTick());
-        assertFalse(tickManager.isTickComplete(1));
+        assertEquals(FIRST_TICK, tickManager.getCurrentTick());
+        assertFalse(tickManager.isTickComplete(FIRST_TICK));
         verifyNoInteractions(fogOfWarService);
 
-        // 2. Red submits
-        tickManager.submitUnits(Side.RED, 1, List.of(red));
+        tickManager.submitUnits(Side.RED, FIRST_TICK, List.of(red));
 
-        // Tick 1 is complete, advanced to 2
-        assertEquals(2, tickManager.getCurrentTick());
-        assertTrue(tickManager.isTickComplete(1));
+        assertEquals(SECOND_TICK, tickManager.getCurrentTick());
+        assertTrue(tickManager.isTickComplete(FIRST_TICK));
         verify(fogOfWarService, times(2)).calculateVisibleEnemies(anyList(), anyList());
 
-        // Check FOW results
-        List<UnitState> visibleForBlue = tickManager.getVisibleEnemies(Side.BLUE, 1);
+        List<UnitState> visibleForBlue = tickManager.getVisibleEnemies(Side.BLUE, FIRST_TICK);
         assertEquals(1, visibleForBlue.size());
-        assertEquals("r1", visibleForBlue.get(0).getId());
+        assertEquals(RED_UNIT, visibleForBlue.get(0).getId());
     }
 
     @Test
@@ -120,27 +130,27 @@ class BarrierTickManagerTest {
         tickManager.setStatus(SimulationStatus.ACTIVE);
         when(fogOfWarService.calculateVisibleEnemies(anyList(), anyList())).thenReturn(List.of());
 
-        UnitState blue = new UnitState("b1", Side.BLUE, 0.0, 0.0, 10.0, UnitStatus.HEALTHY);
-        UnitState red = new UnitState("r1", Side.RED, 100.0, 0.0, 10.0, UnitStatus.HEALTHY);
+        UnitState blue = new UnitState(BLUE_UNIT, Side.BLUE, 0.0, 0.0, ANY_VIEW_RADIUS, UnitStatus.HEALTHY);
+        UnitState red = new UnitState(RED_UNIT, Side.RED, 100.0, 0.0, ANY_VIEW_RADIUS, UnitStatus.HEALTHY);
 
-        tickManager.submitUnits(Side.BLUE, 1, List.of(blue));
-        tickManager.submitUnits(Side.RED, 1, List.of(red));
-        verify(checkpointingService, never()).checkAndSaveSnapshot(eq(1L), anyList());
+        tickManager.submitUnits(Side.BLUE, FIRST_TICK, List.of(blue));
+        tickManager.submitUnits(Side.RED, FIRST_TICK, List.of(red));
+        verify(checkpointingService, never()).checkAndSaveSnapshot(eq(FIRST_TICK), anyList());
 
-        tickManager.submitUnits(Side.BLUE, 2, List.of(blue));
-        tickManager.submitUnits(Side.RED, 2, List.of(red));
-        verify(checkpointingService, times(1)).checkAndSaveSnapshot(eq(2L), anyList());
+        tickManager.submitUnits(Side.BLUE, SECOND_TICK, List.of(blue));
+        tickManager.submitUnits(Side.RED, SECOND_TICK, List.of(red));
+        verify(checkpointingService, times(1)).checkAndSaveSnapshot(eq((long) SNAPSHOT_INTERVAL), anyList());
     }
 
     @Test
     @DisplayName("Timeout handling switches simulation to PAUSED and records event")
     void testTimeoutHandling() {
         tickManager.setStatus(SimulationStatus.ACTIVE);
-        UnitState blue = new UnitState("b1", Side.BLUE, 0.0, 0.0, 10.0, UnitStatus.HEALTHY);
+        UnitState blue = new UnitState(BLUE_UNIT, Side.BLUE, 0.0, 0.0, ANY_VIEW_RADIUS, UnitStatus.HEALTHY);
 
-        tickManager.submitUnits(Side.BLUE, 1, List.of(blue));
+        tickManager.submitUnits(Side.BLUE, FIRST_TICK, List.of(blue));
 
-        ReflectionTestUtils.setField(tickManager, "lastSubmitTime", Instant.now().minusMillis(2000));
+        ReflectionTestUtils.setField(tickManager, LAST_SUBMIT_TIME_FIELD, Instant.now().minusMillis(EXPIRED_SUBMISSION_AGE_MS));
 
         tickManager.checkTimeouts();
 
@@ -155,9 +165,9 @@ class BarrierTickManagerTest {
         tickManager.setStatus(SimulationStatus.ACTIVE);
         tickManager.reset();
 
-        assertEquals(1, tickManager.getCurrentTick());
+        assertEquals(FIRST_TICK, tickManager.getCurrentTick());
         assertEquals(SimulationStatus.INITIALIZING, tickManager.getStatus());
-        assertFalse(tickManager.isTickComplete(1));
+        assertFalse(tickManager.isTickComplete(FIRST_TICK));
         assertTrue(tickManager.getLatestVisibleEnemies(Side.BLUE).isEmpty());
     }
 
@@ -165,38 +175,38 @@ class BarrierTickManagerTest {
     @DisplayName("Submitting from an unregistered side throws SimulatorNotRegisteredException")
     void testSubmitFromUnregisteredSideThrowsException() {
         BarrierTickManager manager = new BarrierTickManager(fogOfWarService, checkpointingService,
-                new InMemorySimulatorRegistry());
+                new InMemorySimulatorRegistry(), TestSimulationSettings.properties());
         manager.setStatus(SimulationStatus.ACTIVE);
-        UnitState blue = new UnitState("b1", Side.BLUE, 0.0, 0.0, 10.0, UnitStatus.HEALTHY);
+        UnitState blue = new UnitState(BLUE_UNIT, Side.BLUE, 0.0, 0.0, ANY_VIEW_RADIUS, UnitStatus.HEALTHY);
 
         assertThrows(SimulatorNotRegisteredException.class, () ->
-                manager.submitUnits(Side.BLUE, 1, List.of(blue)));
+                manager.submitUnits(Side.BLUE, FIRST_TICK, List.of(blue)));
     }
 
     @Test
     @DisplayName("Requesting visibility for an incomplete tick throws TickNotCompleteException")
     void testVisibilityForIncompleteTickThrowsException() {
         tickManager.setStatus(SimulationStatus.ACTIVE);
-        tickManager.submitUnits(Side.BLUE, 1, List.of(new UnitState("b1", Side.BLUE, 0.0, 0.0, 10.0, UnitStatus.HEALTHY)));
+        tickManager.submitUnits(Side.BLUE, FIRST_TICK, List.of(new UnitState(BLUE_UNIT, Side.BLUE, 0.0, 0.0, ANY_VIEW_RADIUS, UnitStatus.HEALTHY)));
 
-        assertEquals(Set.of(Side.BLUE), tickManager.getSubmittedSides(1));
-        assertThrows(TickNotCompleteException.class, () -> tickManager.getVisibleEnemies(Side.BLUE, 1));
-        assertThrows(TickNotCompleteException.class, () -> tickManager.getVisibleEnemies(Side.RED, 5));
+        assertEquals(Set.of(Side.BLUE), tickManager.getSubmittedSides(FIRST_TICK));
+        assertThrows(TickNotCompleteException.class, () -> tickManager.getVisibleEnemies(Side.BLUE, FIRST_TICK));
+        assertThrows(TickNotCompleteException.class, () -> tickManager.getVisibleEnemies(Side.RED, FUTURE_TICK));
     }
 
     @Test
     @DisplayName("Requesting visibility for a tick without stored data throws TickDataUnavailableException")
     void testVisibilityForMissingPastTickThrowsException() {
-        tickManager.restoreState(10, List.of());
+        tickManager.restoreState(RESTORED_SNAPSHOT_TICK, List.of());
 
-        assertThrows(TickDataUnavailableException.class, () -> tickManager.getVisibleEnemies(Side.BLUE, 3));
+        assertThrows(TickDataUnavailableException.class, () -> tickManager.getVisibleEnemies(Side.BLUE, PRUNED_TICK));
     }
 
     @Test
     @DisplayName("Timeout pauses simulation when both sides are silent")
     void testTimeoutWhenBothSidesSilent() {
         tickManager.setStatus(SimulationStatus.ACTIVE);
-        ReflectionTestUtils.setField(tickManager, "lastSubmitTime", Instant.now().minusMillis(2000));
+        ReflectionTestUtils.setField(tickManager, LAST_SUBMIT_TIME_FIELD, Instant.now().minusMillis(EXPIRED_SUBMISSION_AGE_MS));
 
         tickManager.checkTimeouts();
 
@@ -221,13 +231,13 @@ class BarrierTickManagerTest {
     void testCasualtyEventsRecordedOncePerTransition() {
         tickManager.setStatus(SimulationStatus.ACTIVE);
         when(fogOfWarService.calculateVisibleEnemies(anyList(), anyList())).thenReturn(List.of());
-        UnitState blue = new UnitState("b1", Side.BLUE, 0.0, 0.0, 10.0, UnitStatus.HEALTHY);
-        UnitState damagedRed = new UnitState("r1", Side.RED, 100.0, 0.0, 10.0, UnitStatus.DAMAGED);
-        UnitState destroyedRed = new UnitState("r1", Side.RED, 100.0, 0.0, 10.0, UnitStatus.DESTROYED);
+        UnitState blue = new UnitState(BLUE_UNIT, Side.BLUE, 0.0, 0.0, ANY_VIEW_RADIUS, UnitStatus.HEALTHY);
+        UnitState damagedRed = new UnitState(RED_UNIT, Side.RED, 100.0, 0.0, ANY_VIEW_RADIUS, UnitStatus.DAMAGED);
+        UnitState destroyedRed = new UnitState(RED_UNIT, Side.RED, 100.0, 0.0, ANY_VIEW_RADIUS, UnitStatus.DESTROYED);
 
-        submitBothSides(1, blue, damagedRed);
-        submitBothSides(2, blue, destroyedRed);
-        submitBothSides(3, blue, destroyedRed);
+        submitBothSides(FIRST_TICK, blue, damagedRed);
+        submitBothSides(SECOND_TICK, blue, destroyedRed);
+        submitBothSides(SECOND_TICK + 1, blue, destroyedRed);
 
         verify(checkpointingService, times(1)).recordEvent(eq(EventType.UNIT_DAMAGED), eq(Side.RED), anyString());
         verify(checkpointingService, times(1)).recordEvent(eq(EventType.UNIT_DESTROYED), eq(Side.RED), anyString());
@@ -238,14 +248,14 @@ class BarrierTickManagerTest {
     @DisplayName("State epoch increments on reset and restore, after restored units are in place")
     void testEpochIncrementsOnResetAndRestore() {
         long initialEpoch = tickManager.getEpoch();
-        UnitState restoredBlue = new UnitState("b1", Side.BLUE, 42.0, 7.0, 10.0, UnitStatus.DAMAGED);
+        UnitState restoredBlue = new UnitState(BLUE_UNIT, Side.BLUE, 42.0, 7.0, ANY_VIEW_RADIUS, UnitStatus.DAMAGED);
 
         tickManager.reset();
         assertEquals(initialEpoch + 1, tickManager.getEpoch());
 
-        tickManager.restoreState(8, List.of(restoredBlue));
+        tickManager.restoreState(RESTORED_SNAPSHOT_TICK, List.of(restoredBlue));
         assertEquals(initialEpoch + 2, tickManager.getEpoch());
-        assertEquals(9, tickManager.getCurrentTick());
+        assertEquals(RESTORED_SNAPSHOT_TICK + 1, tickManager.getCurrentTick());
         assertEquals(List.of(restoredBlue), tickManager.getLatestUnits(Side.BLUE));
         assertTrue(tickManager.getLatestUnits(Side.RED).isEmpty());
     }
