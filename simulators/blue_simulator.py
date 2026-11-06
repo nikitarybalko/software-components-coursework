@@ -4,14 +4,15 @@ import time
 from typing import Optional
 
 from mesa_model import TacticalWargameModel
+from unit_profiles import UnitType
 
 def create_blue_model(broker_url: str, api_key: str, seed: Optional[int] = None) -> TacticalWargameModel:
     model = TacticalWargameModel(side="BLUE", api_key=api_key, broker_url=broker_url, seed=seed)
     # Western deployment flank
-    model.add_tactical_unit("blue-tank-1", x=20.0, y=70.0, view_radius=60.0, speed=3.8)
-    model.add_tactical_unit("blue-scout-1", x=35.0, y=100.0, view_radius=85.0, speed=5.5)
-    model.add_tactical_unit("blue-infantry-1", x=15.0, y=120.0, view_radius=50.0, speed=2.5)
-    model.add_tactical_unit("blue-apc-1", x=25.0, y=90.0, view_radius=55.0, speed=4.2)
+    model.add_tactical_unit("blue-tank-1", UnitType.ARMOR, x=20.0, y=70.0)
+    model.add_tactical_unit("blue-scout-1", UnitType.RECON, x=35.0, y=100.0)
+    model.add_tactical_unit("blue-infantry-1", UnitType.INFANTRY, x=15.0, y=120.0)
+    model.add_tactical_unit("blue-apc-1", UnitType.MECHANIZED_INFANTRY, x=25.0, y=90.0)
     return model
 
 def run_blue_simulator(broker_url: str, api_key: str, tick_delay: float, max_ticks: int,

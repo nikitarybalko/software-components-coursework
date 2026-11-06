@@ -16,14 +16,20 @@ public class UnitState {
 
     private final String id;
     private final Side side;
+    private final UnitType type;
     private final double x;
     private final double y;
     private final double viewRadius;
     private final UnitStatus status;
 
     public UnitState(String id, Side side, double x, double y, double viewRadius, UnitStatus status) {
+        this(id, side, UnitType.UNKNOWN, x, y, viewRadius, status);
+    }
+
+    public UnitState(String id, Side side, UnitType type, double x, double y, double viewRadius, UnitStatus status) {
         this.id = Objects.requireNonNull(id, "Unit ID must not be null");
         this.side = Objects.requireNonNull(side, "Side must not be null");
+        this.type = Objects.isNull(type) ? UnitType.UNKNOWN : type;
         this.x = x;
         this.y = y;
         this.viewRadius = Math.max(NO_VISION_RADIUS, viewRadius);

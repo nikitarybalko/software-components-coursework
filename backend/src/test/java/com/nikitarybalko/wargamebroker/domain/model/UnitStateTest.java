@@ -68,6 +68,18 @@ class UnitStateTest {
     }
 
     @Test
+    @DisplayName("Unit type defaults to UNKNOWN when it is not reported")
+    void testUnitTypeDefaultsToUnknown() {
+        UnitState withoutType = new UnitState(BLUE_UNIT, Side.BLUE, 0.0, 0.0, 10.0, UnitStatus.HEALTHY);
+        UnitState withNullType = new UnitState(BLUE_UNIT, Side.BLUE, null, 0.0, 0.0, 10.0, UnitStatus.HEALTHY);
+        UnitState armor = new UnitState(BLUE_UNIT, Side.BLUE, UnitType.ARMOR, 0.0, 0.0, 10.0, UnitStatus.HEALTHY);
+
+        assertEquals(UnitType.UNKNOWN, withoutType.getType());
+        assertEquals(UnitType.UNKNOWN, withNullType.getType());
+        assertEquals(UnitType.ARMOR, armor.getType());
+    }
+
+    @Test
     @DisplayName("Constructor throws NullPointerException when required fields are missing")
     void testNullValidationInConstructor() {
         assertThrows(NullPointerException.class, () ->

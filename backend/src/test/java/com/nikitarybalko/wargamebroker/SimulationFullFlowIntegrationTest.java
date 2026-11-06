@@ -4,6 +4,7 @@ import com.nikitarybalko.wargamebroker.domain.model.EventType;
 import com.nikitarybalko.wargamebroker.domain.model.Side;
 import com.nikitarybalko.wargamebroker.domain.model.SimulationStatus;
 import com.nikitarybalko.wargamebroker.domain.model.UnitStatus;
+import com.nikitarybalko.wargamebroker.domain.model.UnitType;
 import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
 import com.nikitarybalko.wargamebroker.support.AbstractPostgresIntegrationTest;
 import com.nikitarybalko.wargamebroker.support.TestApiKeys;
@@ -27,6 +28,8 @@ import java.util.UUID;
 
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.ARRAY_LENGTH;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.BLUE_UNITS_LENGTH;
+import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.FIRST_BLUE_UNIT_TYPE;
+import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.FIRST_RED_UNIT_TYPE;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.BLUE_VISIBLE_RED_LENGTH;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.CURRENT_TICK;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.EPOCH;
@@ -110,6 +113,7 @@ class SimulationFullFlowIntegrationTest extends AbstractPostgresIntegrationTest 
         UnitDto blueTank = UnitDto.builder()
                 .id(BLUE_UNIT)
                 .side(Side.BLUE)
+                .unitType(UnitType.ARMOR)
                 .x(10.0)
                 .y(10.0)
                 .viewRadius(50.0)
@@ -178,7 +182,9 @@ class SimulationFullFlowIntegrationTest extends AbstractPostgresIntegrationTest 
                         .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.ADMIN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath(BLUE_UNITS_LENGTH).value(1))
+                .andExpect(jsonPath(FIRST_BLUE_UNIT_TYPE).value(UnitType.ARMOR.name()))
                 .andExpect(jsonPath(RED_UNITS_LENGTH).value(1))
+                .andExpect(jsonPath(FIRST_RED_UNIT_TYPE).value(UnitType.UNKNOWN.name()))
                 .andExpect(jsonPath(BLUE_VISIBLE_RED_LENGTH).value(1))
                 .andExpect(jsonPath(RED_VISIBLE_BLUE_LENGTH).value(1));
 

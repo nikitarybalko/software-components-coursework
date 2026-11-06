@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -44,6 +45,16 @@ public class GlobalExceptionHandler {
         log.warn("Validation error: {}", details);
 
         return buildResponse(HttpStatus.BAD_REQUEST, message, details);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadablePayload(HttpMessageNotReadableException ex) {
+        String message = "Malformed request payload";
+        String detail = ex.getMostSpecificCause().getMessage();
+        checkpointingService.recordEvent(EventType.VALIDATION_ERROR, null, message + ": " + detail);
+        log.warn("Unreadable request payload: {}", detail);
+
+        return buildResponse(HttpStatus.BAD_REQUEST, message, List.of(detail));
     }
 
     @ExceptionHandler(InvalidTickException.class)

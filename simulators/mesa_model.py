@@ -5,18 +5,21 @@ from typing import List, Dict, Optional, Tuple
 
 import mesa
 
+from unit_profiles import (DAMAGED_SPEED_FACTOR, DAMAGED_FIREPOWER_FACTOR, UNIT_PROFILES,
+                           WITHDRAWAL_MARGIN, UnitProfile, UnitType, profile_of)
+
 
 class TacticalUnitAgent(mesa.Agent):
     """
     Tactical combat unit agent operating in Mesa ContinuousSpace.
+    Characteristics come from the profile of its unit type.
     """
-    def __init__(self, model: "TacticalWargameModel", unit_id: str, side: str,
-                 view_radius: float, speed: float = 3.5):
+    def __init__(self, model: "TacticalWargameModel", unit_id: str, side: str, unit_type: UnitType):
         super().__init__(model)
         self.unit_id = unit_id
         self.side = side
-        self.view_radius = view_radius
-        self.speed = speed
+        self.unit_type = unit_type
+        self.profile = UNIT_PROFILES[unit_type]
         self.status = "HEALTHY"  # HEALTHY, DAMAGED, DESTROYED
 
     def to_dict(self) -> Dict:
@@ -24,9 +27,10 @@ class TacticalUnitAgent(mesa.Agent):
         return {
             "id": self.unit_id,
             "side": self.side,
+            "unitType": self.unit_type.value,
             "x": round(float(x), 2),
             "y": round(float(y), 2),
-            "viewRadius": round(float(self.view_radius), 2),
+            "viewRadius": round(float(self.profile.view_radius), 2),
             "status": self.status
         }
 
@@ -42,32 +46,69 @@ class TacticalUnitAgent(mesa.Agent):
             return
 
         threats = self._active_threats()
-        self._resolve_combat(threats)
+        self._resolve_incoming_fire(threats)
         if self.status == "DESTROYED":
             return
 
-        effective_speed = self.speed * 0.5 if self.status == "DAMAGED" else self.speed
-
+        speed = self.profile.speed * (DAMAGED_SPEED_FACTOR if self.status == "DAMAGED" else 1.0)
         if threats:
-            # Maneuver towards nearest operational enemy
             nearest = min(threats, key=lambda e: self.distance_to(e["x"], e["y"]))
-            self._move_towards(nearest["x"], nearest["y"], effective_speed, min_standoff=10.0)
+            self._hold_distance(nearest, self._desired_distance(nearest), speed)
         else:
-            # Tactical march across the battlefield
-            target_x = self.pos[0] + (effective_speed * 1.5 if self.side == "BLUE" else -effective_speed * 1.5)
-            target_y = self.pos[1] + self.model.random.uniform(-1.0, 1.0)
-            self._move_towards(target_x, target_y, effective_speed, min_standoff=0.0)
+            self._march(speed)
 
     def _active_threats(self) -> List[Dict]:
         """Spotted enemies that can still fight; wrecks stay visible but are neither targets nor threats."""
         return [enemy for enemy in self.model.visible_enemies if enemy.get("status") != "DESTROYED"]
 
-    def _move_towards(self, target_x: float, target_y: float, speed: float, min_standoff: float):
+    def _resolve_incoming_fire(self, threats: List[Dict]):
+        """Every enemy that has this unit inside its weapon range gets one shot per tick."""
+        for enemy in threats:
+            enemy_profile = profile_of(enemy.get("unitType"))
+            if self.distance_to(enemy["x"], enemy["y"]) > enemy_profile.weapon_range:
+                continue
+            if self.model.random.random() < self._hit_chance(enemy, enemy_profile):
+                self._take_hit()
+                if self.status == "DESTROYED":
+                    return
+
+    def _hit_chance(self, enemy: Dict, enemy_profile: UnitProfile) -> float:
+        firepower = enemy_profile.firepower
+        if enemy.get("status") == "DAMAGED":
+            firepower *= DAMAGED_FIREPOWER_FACTOR
+        return firepower * (1.0 - self.profile.protection)
+
+    def _take_hit(self):
+        self.status = "DAMAGED" if self.status == "HEALTHY" else "DESTROYED"
+
+    def _desired_distance(self, nearest: Dict) -> float:
+        """Healthy units keep their engagement distance; damaged ones pull out of the enemy's weapon range."""
+        if self.status == "DAMAGED":
+            enemy_range = profile_of(nearest.get("unitType")).weapon_range
+            return max(self.profile.engagement_distance, enemy_range + WITHDRAWAL_MARGIN)
+        return self.profile.engagement_distance
+
+    def _hold_distance(self, enemy: Dict, distance: float, speed: float):
+        """Moves towards the point at the given distance from the enemy: approaches or backs off as needed."""
+        current = self.distance_to(enemy["x"], enemy["y"])
+        if current < 0.001:
+            return
+        away_x = (self.pos[0] - enemy["x"]) / current
+        away_y = (self.pos[1] - enemy["y"]) / current
+        self._move_towards(enemy["x"] + away_x * distance, enemy["y"] + away_y * distance, speed)
+
+    def _march(self, speed: float):
+        direction = 1.0 if self.side == "BLUE" else -1.0
+        target_x = self.pos[0] + direction * speed * 1.5
+        target_y = self.pos[1] + self.model.random.uniform(-1.0, 1.0)
+        self._move_towards(target_x, target_y, speed)
+
+    def _move_towards(self, target_x: float, target_y: float, speed: float):
         dist = self.distance_to(target_x, target_y)
-        if dist <= min_standoff or dist < 0.001:
+        if dist < 0.001:
             return
 
-        step = min(speed, dist - min_standoff)
+        step = min(speed, dist)
         curr_x, curr_y = self.pos
         next_x = curr_x + (target_x - curr_x) / dist * step
         next_y = curr_y + (target_y - curr_y) / dist * step
@@ -77,18 +118,6 @@ class TacticalUnitAgent(mesa.Agent):
         clamped_y = max(2.0, min(self.model.space.y_max - 2.0, next_y))
 
         self.model.space.move_agent(self, (clamped_x, clamped_y))
-
-    def _resolve_combat(self, visible_enemies: List[Dict]):
-        for enemy in visible_enemies:
-            ex = enemy.get("x", 0.0)
-            ey = enemy.get("y", 0.0)
-            if self.distance_to(ex, ey) <= 18.0:
-                roll = self.model.random.random()
-                if roll < 0.15:
-                    self.status = "DAMAGED"
-                elif roll < 0.22 and self.status == "DAMAGED":
-                    self.status = "DESTROYED"
-                break
 
 
 class TacticalWargameModel(mesa.Model):
@@ -118,8 +147,8 @@ class TacticalWargameModel(mesa.Model):
     def log(self, message: str):
         print(f"[{self.side} FORCE] {message}", flush=True)
 
-    def add_tactical_unit(self, unit_id: str, x: float, y: float, view_radius: float, speed: float = 3.5):
-        unit = TacticalUnitAgent(self, unit_id=unit_id, side=self.side, view_radius=view_radius, speed=speed)
+    def add_tactical_unit(self, unit_id: str, unit_type: UnitType, x: float, y: float):
+        unit = TacticalUnitAgent(self, unit_id=unit_id, side=self.side, unit_type=unit_type)
         self.space.place_agent(unit, (x, y))
         self.initial_deployment[unit_id] = (x, y)
         return unit

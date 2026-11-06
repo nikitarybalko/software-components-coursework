@@ -35,6 +35,8 @@ public final class TestJsonPaths {
     public static final String BLUE_VISIBLE_RED_LENGTH = "$.blueVisibleRed.length()";
     public static final String RED_VISIBLE_BLUE_LENGTH = "$.redVisibleBlue.length()";
     public static final String FIRST_BLUE_UNIT_VIEW_RADIUS = "$.blueUnits[0].viewRadius";
+    public static final String FIRST_BLUE_UNIT_TYPE = "$.blueUnits[0].unitType";
+    public static final String FIRST_RED_UNIT_TYPE = "$.redUnits[0].unitType";
     public static final String FIRST_BLUE_UNIT_EFFECTIVE_VIEW_RADIUS = "$.blueUnits[0].effectiveViewRadius";
 
     public static final String FIRST_ITEM_TICK_NUMBER = "$[0].tickNumber";
@@ -45,6 +47,8 @@ public final class TestJsonPaths {
     public static final String FIELD_ID = "id";
     public static final String FIELD_EPOCH = "epoch";
     public static final String FIELD_X = "x";
+    public static final String FIELD_UNITS = "units";
+    public static final String FIELD_UNIT_TYPE = "unitType";
     public static final String FIELD_BLUE_UNITS = "blueUnits";
     public static final String FIELD_RED_UNITS = "redUnits";
 }

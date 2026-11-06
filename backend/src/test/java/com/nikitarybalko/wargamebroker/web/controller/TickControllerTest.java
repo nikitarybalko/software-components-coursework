@@ -6,6 +6,7 @@ import com.nikitarybalko.wargamebroker.domain.model.Side;
 import com.nikitarybalko.wargamebroker.domain.model.SimulationStatus;
 import com.nikitarybalko.wargamebroker.domain.model.UnitState;
 import com.nikitarybalko.wargamebroker.domain.model.UnitStatus;
+import com.nikitarybalko.wargamebroker.domain.model.UnitType;
 import com.nikitarybalko.wargamebroker.domain.service.SimulatorRegistry;
 import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
 import com.nikitarybalko.wargamebroker.domain.service.TickManager;
@@ -18,8 +19,10 @@ import com.nikitarybalko.wargamebroker.web.mapper.SimulationStatusMapper;
 import com.nikitarybalko.wargamebroker.web.security.ApiKeyAuthFilter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -35,6 +38,8 @@ import java.util.List;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.CURRENT_TICK;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.EPOCH;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.ERROR;
+import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.FIELD_UNITS;
+import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.FIELD_UNIT_TYPE;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.FIRST_UNIT_ID;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.FIRST_UNIT_STATUS;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.FIRST_VISIBLE_ENEMY_ID;
@@ -46,10 +51,13 @@ import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.VISIBLE_ENEM
 import static com.nikitarybalko.wargamebroker.support.TestSimulationSettings.FIRST_TICK;
 import static com.nikitarybalko.wargamebroker.support.TestSimulationSettings.SECOND_TICK;
 import static com.nikitarybalko.wargamebroker.support.TestUnitIds.BLUE_UNIT;
+import static com.nikitarybalko.wargamebroker.support.TestUnitIds.BLUE_UNIT_2;
 import static com.nikitarybalko.wargamebroker.support.TestUnitIds.RED_UNIT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -65,6 +73,7 @@ class TickControllerTest {
 
     private static final long ONGOING_TICK = 9;
     private static final long STATE_EPOCH = 3;
+    private static final String UNSUPPORTED_UNIT_TYPE = "SPACESHIP";
 
     @Autowired
     private MockMvc mockMvc;
@@ -281,6 +290,50 @@ class TickControllerTest {
         mockMvc.perform(get(TestEndpoints.OWN_UNITS)
                         .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.ADMIN))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Submitted unit type is passed to the tick manager, missing type becomes UNKNOWN")
+    void submitUnitsPassesUnitTypeToDomain() throws Exception {
+        UnitDto tank = createUnitDto(BLUE_UNIT, Side.BLUE, 10.0, 20.0, 60.0, UnitStatus.HEALTHY);
+        tank.setUnitType(UnitType.ARMOR);
+        UnitDto untyped = createUnitDto(BLUE_UNIT_2, Side.BLUE, 15.0, 25.0, 50.0, UnitStatus.HEALTHY);
+        SubmitUnitsRequest request = SubmitUnitsRequest.builder()
+                .tickNumber(FIRST_TICK)
+                .units(List.of(tank, untyped))
+                .build();
+
+        mockMvc.perform(post(TestEndpoints.SUBMIT)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.BLUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<UnitState>> submitted = ArgumentCaptor.forClass(List.class);
+        verify(tickManager).submitUnits(eq(Side.BLUE), eq(FIRST_TICK), submitted.capture());
+        assertEquals(List.of(UnitType.ARMOR, UnitType.UNKNOWN),
+                submitted.getValue().stream().map(UnitState::getType).toList());
+    }
+
+    @Test
+    @DisplayName("Submit units returns 400 for an unsupported unit type")
+    void submitUnitsWithUnsupportedTypeReturnsBadRequest() throws Exception {
+        SubmitUnitsRequest request = SubmitUnitsRequest.builder()
+                .tickNumber(FIRST_TICK)
+                .units(List.of(createUnitDto(BLUE_UNIT, Side.BLUE, 10.0, 20.0, 50.0, UnitStatus.HEALTHY)))
+                .build();
+        ObjectNode payload = objectMapper.valueToTree(request);
+        ((ObjectNode) payload.get(FIELD_UNITS).get(0)).put(FIELD_UNIT_TYPE, UNSUPPORTED_UNIT_TYPE);
+
+        mockMvc.perform(post(TestEndpoints.SUBMIT)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.BLUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(payload)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath(ERROR).value(HttpStatus.BAD_REQUEST.getReasonPhrase()));
+
+        verify(tickManager, never()).submitUnits(any(), any(Long.class), any());
     }
 
     private UnitDto createUnitDto(String id, Side side, double x, double y, double radius, UnitStatus status) {

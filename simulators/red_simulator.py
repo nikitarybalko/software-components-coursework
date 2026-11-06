@@ -4,14 +4,15 @@ import time
 from typing import Optional
 
 from mesa_model import TacticalWargameModel
+from unit_profiles import UnitType
 
 def create_red_model(broker_url: str, api_key: str, seed: Optional[int] = None) -> TacticalWargameModel:
     model = TacticalWargameModel(side="RED", api_key=api_key, broker_url=broker_url, seed=seed)
     # Eastern deployment flank
-    model.add_tactical_unit("red-tank-1", x=280.0, y=75.0, view_radius=60.0, speed=3.8)
-    model.add_tactical_unit("red-scout-1", x=265.0, y=95.0, view_radius=85.0, speed=5.5)
-    model.add_tactical_unit("red-infantry-1", x=285.0, y=115.0, view_radius=50.0, speed=2.5)
-    model.add_tactical_unit("red-apc-1", x=275.0, y=85.0, view_radius=55.0, speed=4.2)
+    model.add_tactical_unit("red-tank-1", UnitType.ARMOR, x=280.0, y=75.0)
+    model.add_tactical_unit("red-scout-1", UnitType.RECON, x=265.0, y=95.0)
+    model.add_tactical_unit("red-infantry-1", UnitType.INFANTRY, x=285.0, y=115.0)
+    model.add_tactical_unit("red-apc-1", UnitType.MECHANIZED_INFANTRY, x=275.0, y=85.0)
     return model
 
 def run_red_simulator(broker_url: str, api_key: str, tick_delay: float, max_ticks: int,

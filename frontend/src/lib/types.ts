@@ -2,6 +2,8 @@ export type Side = "BLUE" | "RED";
 
 export type UnitStatus = "HEALTHY" | "DAMAGED" | "DESTROYED";
 
+export type UnitType = "ARMOR" | "MECHANIZED_INFANTRY" | "INFANTRY" | "RECON" | "UNKNOWN";
+
 export type SimulationStatus = "INITIALIZING" | "ACTIVE" | "PAUSED" | "STOPPED";
 
 export type EventType =
@@ -20,6 +22,7 @@ export type EventType =
 export interface Unit {
   id: string;
   side: Side;
+  unitType: UnitType;
   x: number;
   y: number;
   viewRadius: number;

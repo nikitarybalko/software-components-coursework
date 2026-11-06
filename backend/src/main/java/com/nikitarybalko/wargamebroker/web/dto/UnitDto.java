@@ -3,6 +3,7 @@ package com.nikitarybalko.wargamebroker.web.dto;
 import com.nikitarybalko.wargamebroker.domain.model.Side;
 import com.nikitarybalko.wargamebroker.domain.model.UnitState;
 import com.nikitarybalko.wargamebroker.domain.model.UnitStatus;
+import com.nikitarybalko.wargamebroker.domain.model.UnitType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -26,6 +27,10 @@ public class UnitDto {
     @NotNull(message = "Unit side cannot be null")
     @Schema(description = "Faction side of the unit", example = "BLUE")
     private Side side;
+
+    @Schema(description = "Combat function of the unit, used for NATO APP-6 symbols. Optional, defaults to UNKNOWN",
+            example = "ARMOR")
+    private UnitType unitType;
 
     @NotNull(message = "X coordinate cannot be null")
     @Schema(description = "Continuous 2D X coordinate", example = "105.5")
@@ -55,6 +60,7 @@ public class UnitDto {
         return UnitDto.builder()
                 .id(domain.getId())
                 .side(domain.getSide())
+                .unitType(domain.getType())
                 .x(domain.getX())
                 .y(domain.getY())
                 .viewRadius(domain.getViewRadius())
@@ -64,6 +70,6 @@ public class UnitDto {
     }
 
     public UnitState toDomain() {
-        return new UnitState(this.id, this.side, this.x, this.y, this.viewRadius, this.status);
+        return new UnitState(this.id, this.side, this.unitType, this.x, this.y, this.viewRadius, this.status);
     }
 }

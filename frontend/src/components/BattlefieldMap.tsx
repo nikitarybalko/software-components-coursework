@@ -8,10 +8,11 @@ import {
   SIDE_COLORS,
   SIDE_LABELS,
   UNIT_STATUS_LABELS,
+  UNIT_TYPE_LABELS,
   shortUnitName,
   unitKey,
 } from "@/lib/presentation";
-import type { Battlefield, Side, Unit } from "@/lib/types";
+import type { Battlefield, Side, Unit, UnitType } from "@/lib/types";
 
 export type ViewMode = "ARBITER" | Side;
 
@@ -129,39 +130,102 @@ function Trail({ points, side }: { points: { x: number; y: number }[]; side: Sid
   );
 }
 
-function UnitShape({ unit, size, fill, stroke }: { unit: Unit; size: number; fill: string; stroke: string }) {
-  const common = { fill, fillOpacity: 0.3, stroke, strokeWidth: 2, vectorEffect: "non-scaling-stroke" as const };
+interface SymbolBox {
+  x: number;
+  y: number;
+  halfWidth: number;
+  halfHeight: number;
+}
+
+/** Area inside the frame where the APP-6 function icon is drawn. */
+function iconBox(unit: Unit, size: number): SymbolBox {
+  return unit.side === "BLUE"
+    ? { x: unit.x, y: unit.y, halfWidth: size, halfHeight: size * 0.7 }
+    : { x: unit.x, y: unit.y, halfWidth: size / 2, halfHeight: size / 2 };
+}
+
+function UnitFrame({ unit, size, fill, stroke, dashed }: {
+  unit: Unit;
+  size: number;
+  fill: string;
+  stroke: string;
+  dashed: boolean;
+}) {
+  const common = {
+    fill,
+    fillOpacity: 0.3,
+    stroke,
+    strokeWidth: 2,
+    strokeDasharray: dashed ? "3 2" : undefined,
+    vectorEffect: "non-scaling-stroke" as const,
+  };
   if (unit.side === "BLUE") {
-    return <rect x={unit.x - size} y={unit.y - size * 0.7} width={size * 2} height={size * 1.4} rx={size * 0.15} {...common} />;
+    return <rect x={unit.x - size} y={unit.y - size * 0.7} width={size * 2} height={size * 1.4} {...common} />;
   }
   const { x, y } = unit;
   return <polygon points={`${x},${y - size} ${x + size},${y} ${x},${y + size} ${x - size},${y}`} {...common} />;
 }
 
+function FunctionIcon({ type, box, stroke }: { type: UnitType; box: SymbolBox; stroke: string }) {
+  const { x, y, halfWidth: w, halfHeight: h } = box;
+  const line = { stroke, strokeWidth: 1.5, vectorEffect: "non-scaling-stroke" as const };
+  const cross = <path d={`M${x - w},${y - h} L${x + w},${y + h} M${x + w},${y - h} L${x - w},${y + h}`} {...line} />;
+  const track = <ellipse cx={x} cy={y} rx={w * 0.6} ry={h * 0.45} fill="none" {...line} />;
+
+  switch (type) {
+    case "ARMOR":
+      return track;
+    case "INFANTRY":
+      return cross;
+    case "MECHANIZED_INFANTRY":
+      return (
+        <>
+          {cross}
+          {track}
+        </>
+      );
+    case "RECON":
+      return <path d={`M${x - w},${y + h} L${x + w},${y - h}`} {...line} />;
+    default:
+      return null;
+  }
+}
+
+function DestroyedMark({ unit, size }: { unit: Unit; size: number }) {
+  const cx = unit.x + size * 1.15;
+  const cy = unit.y - size * 1.05;
+  const r = size * 0.45;
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={r} fill="#0b1222" stroke={DESTROYED_COLOR} vectorEffect="non-scaling-stroke" />
+      <path d={`M${cx - r * 0.5},${cy - r * 0.5} L${cx + r * 0.5},${cy + r * 0.5} M${cx + r * 0.5},${cy - r * 0.5} L${cx - r * 0.5},${cy + r * 0.5}`}
+            stroke="#e2e8f0" strokeWidth={1.2} vectorEffect="non-scaling-stroke" />
+    </g>
+  );
+}
+
 function UnitMarker({ unit, size, spotted }: { unit: Unit; size: number; spotted: boolean }) {
   const destroyed = unit.status === "DESTROYED";
-  const fill = destroyed ? DESTROYED_COLOR : SIDE_COLORS[unit.side];
-  const stroke = unit.status === "DAMAGED" ? DAMAGED_COLOR : fill;
+  const color = destroyed ? DESTROYED_COLOR : SIDE_COLORS[unit.side];
+  const stroke = unit.status === "DAMAGED" ? DAMAGED_COLOR : color;
   const tooltip = [
     `${SIDE_LABELS[unit.side]} · ${unit.id}`,
+    `Тип: ${UNIT_TYPE_LABELS[unit.unitType] ?? UNIT_TYPE_LABELS.UNKNOWN}`,
     `Стан: ${UNIT_STATUS_LABELS[unit.status]}`,
     `Координати: (${unit.x.toFixed(1)}, ${unit.y.toFixed(1)})`,
     `Радіус огляду: ${unit.effectiveViewRadius.toFixed(1)} з ${unit.viewRadius.toFixed(1)}`,
   ].join("\n");
 
   return (
-    <g opacity={destroyed ? 0.7 : 1}>
+    <g opacity={destroyed ? 0.75 : 1}>
       <title>{tooltip}</title>
       {spotted && (
         <circle cx={unit.x} cy={unit.y} r={size * 1.9} fill="none" stroke={SIDE_COLORS[opponentOf(unit.side)]}
                 strokeWidth={1.5} strokeDasharray="2 3" vectorEffect="non-scaling-stroke" className="animate-pulse" />
       )}
-      <UnitShape unit={unit} size={size} fill={fill} stroke={stroke} />
-      {destroyed && (
-        <path d={`M${unit.x - size * 0.8},${unit.y - size * 0.8} L${unit.x + size * 0.8},${unit.y + size * 0.8}
-                  M${unit.x + size * 0.8},${unit.y - size * 0.8} L${unit.x - size * 0.8},${unit.y + size * 0.8}`}
-              stroke="#e2e8f0" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-      )}
+      <UnitFrame unit={unit} size={size} fill={color} stroke={stroke} dashed={destroyed} />
+      <FunctionIcon type={unit.unitType} box={iconBox(unit, size)} stroke={destroyed ? "#94a3b8" : "#e2e8f0"} />
+      {destroyed && <DestroyedMark unit={unit} size={size} />}
       <text x={unit.x} y={unit.y + size * 2.5} fontSize={size * 1.1} textAnchor="middle" fill="#cbd5e1"
             stroke="#020617" strokeWidth={size * 0.35} paintOrder="stroke">
         {shortUnitName(unit)}

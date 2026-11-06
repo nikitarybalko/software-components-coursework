@@ -121,6 +121,7 @@ public class JpaStateCheckpointingService implements StateCheckpointingService {
                 .snapshot(parent)
                 .unitId(unit.getId())
                 .side(unit.getSide())
+                .unitType(unit.getType())
                 .x(unit.getX())
                 .y(unit.getY())
                 .viewRadius(unit.getViewRadius())
@@ -140,6 +141,7 @@ public class JpaStateCheckpointingService implements StateCheckpointingService {
         return new UnitState(
                 entity.getUnitId(),
                 entity.getSide(),
+                entity.getUnitType(),
                 entity.getX(),
                 entity.getY(),
                 entity.getViewRadius(),

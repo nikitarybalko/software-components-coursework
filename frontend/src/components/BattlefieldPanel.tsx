@@ -39,29 +39,64 @@ function LegendItem({ children, label }: { children: React.ReactNode; label: str
   );
 }
 
+const NEUTRAL_STROKE = "#cbd5e1";
+
+function TypeIcon({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <rect x="2" y="4" width="12" height="8" fill="none" stroke={NEUTRAL_STROKE} strokeWidth="1.2" />
+      {children}
+    </>
+  );
+}
+
 function Legend() {
   return (
-    <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-400">
-      <LegendItem label="Blue Force">
-        <rect x="2" y="4" width="12" height="8" rx="1" fill={SIDE_COLORS.BLUE} fillOpacity="0.3" stroke={SIDE_COLORS.BLUE} strokeWidth="1.5" />
-      </LegendItem>
-      <LegendItem label="Red Force">
-        <polygon points="8,2 14,8 8,14 2,8" fill={SIDE_COLORS.RED} fillOpacity="0.3" stroke={SIDE_COLORS.RED} strokeWidth="1.5" />
-      </LegendItem>
-      <LegendItem label="Зона огляду">
-        <circle cx="8" cy="8" r="6" fill="#94a3b8" fillOpacity="0.1" stroke="#94a3b8" strokeDasharray="2 2" />
-      </LegendItem>
-      <LegendItem label="Виявлений противником">
-        <circle cx="8" cy="8" r="6" fill="none" stroke="#e2e8f0" strokeDasharray="2 2" />
-      </LegendItem>
-      <LegendItem label="Пошкоджений (радіус ×0.5)">
-        <rect x="2" y="4" width="12" height="8" rx="1" fill="none" stroke={DAMAGED_COLOR} strokeWidth="1.5" />
-      </LegendItem>
-      <LegendItem label="Знищений">
-        <rect x="2" y="4" width="12" height="8" rx="1" fill={DESTROYED_COLOR} fillOpacity="0.3" stroke={DESTROYED_COLOR} strokeWidth="1.5" />
-        <path d="M4 4 L12 12 M12 4 L4 12" stroke="#e2e8f0" strokeWidth="1.2" />
-      </LegendItem>
-    </ul>
+    <div className="mt-3 space-y-1.5 text-xs text-slate-400">
+      <ul className="flex flex-wrap gap-x-4 gap-y-1.5">
+        <LegendItem label="Blue Force">
+          <rect x="2" y="4" width="12" height="8" fill={SIDE_COLORS.BLUE} fillOpacity="0.3" stroke={SIDE_COLORS.BLUE} strokeWidth="1.5" />
+        </LegendItem>
+        <LegendItem label="Red Force">
+          <polygon points="8,2 14,8 8,14 2,8" fill={SIDE_COLORS.RED} fillOpacity="0.3" stroke={SIDE_COLORS.RED} strokeWidth="1.5" />
+        </LegendItem>
+        <LegendItem label="Зона огляду">
+          <circle cx="8" cy="8" r="6" fill="#94a3b8" fillOpacity="0.1" stroke="#94a3b8" strokeDasharray="2 2" />
+        </LegendItem>
+        <LegendItem label="Виявлений противником">
+          <circle cx="8" cy="8" r="6" fill="none" stroke="#e2e8f0" strokeDasharray="2 2" />
+        </LegendItem>
+        <LegendItem label="Пошкоджений (радіус ×0.5)">
+          <rect x="2" y="4" width="12" height="8" fill="none" stroke={DAMAGED_COLOR} strokeWidth="1.5" />
+        </LegendItem>
+        <LegendItem label="Знищений">
+          <rect x="2" y="5" width="10" height="7" fill={DESTROYED_COLOR} fillOpacity="0.3" stroke={DESTROYED_COLOR}
+                strokeWidth="1.5" strokeDasharray="2 1.5" />
+          <circle cx="13" cy="4" r="2.6" fill="#0b1222" stroke={DESTROYED_COLOR} strokeWidth="0.8" />
+          <path d="M11.8 2.8 L14.2 5.2 M14.2 2.8 L11.8 5.2" stroke="#e2e8f0" strokeWidth="0.8" />
+        </LegendItem>
+      </ul>
+      <ul className="flex flex-wrap gap-x-4 gap-y-1.5" aria-label="Типи підрозділів">
+        <LegendItem label="Танковий">
+          <TypeIcon><ellipse cx="8" cy="8" rx="3.6" ry="1.8" fill="none" stroke={NEUTRAL_STROKE} strokeWidth="1.2" /></TypeIcon>
+        </LegendItem>
+        <LegendItem label="Механізована піхота">
+          <TypeIcon>
+            <path d="M2 4 L14 12 M14 4 L2 12" stroke={NEUTRAL_STROKE} strokeWidth="1.2" />
+            <ellipse cx="8" cy="8" rx="3.6" ry="1.8" fill="none" stroke={NEUTRAL_STROKE} strokeWidth="1.2" />
+          </TypeIcon>
+        </LegendItem>
+        <LegendItem label="Піхота">
+          <TypeIcon><path d="M2 4 L14 12 M14 4 L2 12" stroke={NEUTRAL_STROKE} strokeWidth="1.2" /></TypeIcon>
+        </LegendItem>
+        <LegendItem label="Розвідка">
+          <TypeIcon><path d="M2 12 L14 4" stroke={NEUTRAL_STROKE} strokeWidth="1.2" /></TypeIcon>
+        </LegendItem>
+        <LegendItem label="Тип невідомий">
+          <TypeIcon>{null}</TypeIcon>
+        </LegendItem>
+      </ul>
+    </div>
   );
 }
 

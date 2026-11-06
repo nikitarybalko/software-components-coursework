@@ -6,6 +6,7 @@ import com.nikitarybalko.wargamebroker.domain.model.Side;
 import com.nikitarybalko.wargamebroker.domain.model.Snapshot;
 import com.nikitarybalko.wargamebroker.domain.model.UnitState;
 import com.nikitarybalko.wargamebroker.domain.model.UnitStatus;
+import com.nikitarybalko.wargamebroker.domain.model.UnitType;
 import com.nikitarybalko.wargamebroker.infrastructure.persistence.entity.EventLogEntity;
 import com.nikitarybalko.wargamebroker.infrastructure.persistence.repository.EventLogRepository;
 import com.nikitarybalko.wargamebroker.infrastructure.persistence.repository.SnapshotRepository;
@@ -100,6 +101,20 @@ class JpaStateCheckpointingServiceTest extends AbstractPostgresIntegrationTest {
     }
 
     @Test
+    @DisplayName("Snapshot keeps unit types after being reloaded from the database")
+    void testSnapshotPersistsUnitTypes() {
+        UnitState recon = new UnitState(BLUE_UNIT, Side.BLUE, UnitType.RECON, 10.0, 20.0, 85.0, UnitStatus.HEALTHY);
+        UnitState untyped = new UnitState(RED_UNIT, Side.RED, 30.0, 40.0, 50.0, UnitStatus.HEALTHY);
+
+        checkpointingService.checkAndSaveSnapshot(FIRST_TICK, List.of(recon, untyped));
+
+        Snapshot reloaded = checkpointingService.loadSnapshot(checkpointingService.getRecentSnapshots().get(0).getId())
+                .orElseThrow();
+        assertEquals(UnitType.RECON, findUnit(reloaded, BLUE_UNIT).getType());
+        assertEquals(UnitType.UNKNOWN, findUnit(reloaded, RED_UNIT).getType());
+    }
+
+    @Test
     @DisplayName("recordEvent truncates messages longer than the column limit instead of failing")
     void testRecordEventTruncatesLongMessage() {
         String oversizedMessage = "x".repeat(EventLogEntity.MAX_MESSAGE_LENGTH * 2);
@@ -109,5 +124,12 @@ class JpaStateCheckpointingServiceTest extends AbstractPostgresIntegrationTest {
         String storedMessage = checkpointingService.getRecentEvents().get(0).getMessage();
         assertEquals(EventLogEntity.MAX_MESSAGE_LENGTH, storedMessage.length());
         assertTrue(storedMessage.endsWith(TRUNCATION_MARKER));
+    }
+
+    private UnitState findUnit(Snapshot snapshot, String unitId) {
+        return snapshot.getUnits().stream()
+                .filter(unit -> unit.getId().equals(unitId))
+                .findFirst()
+                .orElseThrow();
     }
 }

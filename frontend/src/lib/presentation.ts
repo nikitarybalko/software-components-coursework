@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { EventType, Side, SimulationStatus, Unit, UnitStatus } from "./types";
+import type { EventType, Side, SimulationStatus, Unit, UnitStatus, UnitType } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -30,6 +30,14 @@ export const UNIT_STATUS_LABELS: Record<UnitStatus, string> = {
   HEALTHY: "боєздатний",
   DAMAGED: "пошкоджений",
   DESTROYED: "знищений",
+};
+
+export const UNIT_TYPE_LABELS: Record<UnitType, string> = {
+  ARMOR: "танковий",
+  MECHANIZED_INFANTRY: "механізована піхота",
+  INFANTRY: "піхота",
+  RECON: "розвідка",
+  UNKNOWN: "тип невідомий",
 };
 
 export type Tone = "neutral" | "info" | "success" | "warning" | "danger";

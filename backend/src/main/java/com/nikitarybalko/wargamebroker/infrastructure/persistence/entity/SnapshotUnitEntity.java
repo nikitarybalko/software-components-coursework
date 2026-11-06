@@ -16,6 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import com.nikitarybalko.wargamebroker.domain.model.Side;
 import com.nikitarybalko.wargamebroker.domain.model.UnitStatus;
+import com.nikitarybalko.wargamebroker.domain.model.UnitType;
 
 import java.util.UUID;
 
@@ -41,6 +42,9 @@ public class SnapshotUnitEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Side side;
+
+    @Enumerated(EnumType.STRING)
+    private UnitType unitType;
 
     @Column(nullable = false)
     private double x;
