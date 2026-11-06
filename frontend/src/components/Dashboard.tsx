@@ -13,7 +13,7 @@ import { SnapshotList } from "./SnapshotList";
 import { StatusHeader } from "./StatusHeader";
 
 export function Dashboard() {
-  const { status, battlefield, snapshots, events, connectionError, refresh } = useBrokerState();
+  const { status, battlefield, snapshots, events, connectionError, lastUpdate, refresh } = useBrokerState();
   const trails = useUnitTrails(battlefield, status?.epoch);
   const [viewMode, setViewMode] = useState<ViewMode>("ARBITER");
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -33,21 +33,21 @@ export function Dashboard() {
   }, [refresh]);
 
   return (
-    <main className="mx-auto max-w-[1600px] space-y-4 px-4 py-4 sm:px-6 sm:py-6">
-      <StatusHeader status={status} connectionError={connectionError} />
+    <main className="mx-auto max-w-[1600px] space-y-3 px-4 py-4 sm:px-6 sm:py-5">
+      <StatusHeader status={status} connectionError={connectionError} lastUpdate={lastUpdate} />
 
       {connectionError && (
-        <p role="alert" className="rounded-xl border border-rose-900 bg-rose-950/50 px-4 py-3 text-sm text-rose-200">
-          {connectionError}. Дані на екрані можуть бути застарілими.
+        <p role="alert" className="border border-alert bg-sheet px-3 py-2 text-sm text-alert">
+          {connectionError}. Обстановка на екрані може бути застарілою.
         </p>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="min-w-0 space-y-4">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-3">
           <BattlefieldPanel battlefield={battlefield} trails={trails} viewMode={viewMode} onViewModeChange={setViewMode} />
           <EventLog events={events} />
         </div>
-        <aside className="space-y-4">
+        <aside className="space-y-3">
           <ControlPanel status={status} busyAction={busyAction} error={actionError} onAction={runAction}
                         actions={brokerApi} />
           <ForceSummary battlefield={battlefield} />

@@ -2,66 +2,58 @@
 
 import { Loader2 } from "lucide-react";
 import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
-import { TONE_CLASSES, cn, type Tone } from "@/lib/presentation";
+import { cn } from "@/lib/presentation";
 
-export function Panel({ title, icon, actions, children, className }: {
+export function Panel({ index, title, aside, children, className, bodyClassName }: {
+  index: number;
   title: string;
-  icon?: ReactNode;
-  actions?: ReactNode;
+  aside?: ReactNode;
   children: ReactNode;
   className?: string;
+  bodyClassName?: string;
 }) {
   return (
-    <section className={cn("rounded-xl border border-slate-800 bg-slate-900/70 shadow-lg shadow-black/20", className)}>
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
-        <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-300">
-          {icon}
+    <section className={cn("border border-ink bg-sheet", className)}>
+      <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-ink px-3 py-1.5">
+        <h2 className="font-heading text-[13px] font-semibold uppercase text-ink">
+          <span className="mr-1.5 font-mono font-normal text-ink-faint">{index}.</span>
           {title}
         </h2>
-        {actions}
+        {aside}
       </header>
-      <div className="p-4">{children}</div>
+      <div className={cn("p-3", bodyClassName)}>{children}</div>
     </section>
-  );
-}
-
-export function Badge({ tone = "neutral", children, className }: { tone?: Tone; children: ReactNode; className?: string }) {
-  return (
-    <span className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium", TONE_CLASSES[tone], className)}>
-      {children}
-    </span>
   );
 }
 
 type ButtonVariant = "primary" | "secondary" | "danger";
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
-  primary: "border-sky-600 bg-sky-600 text-white hover:bg-sky-500",
-  secondary: "border-slate-700 bg-slate-800 text-slate-100 hover:bg-slate-700",
-  danger: "border-rose-700 bg-rose-700 text-white hover:bg-rose-600",
+  primary: "border-ink bg-ink text-sheet hover:bg-olive hover:border-olive",
+  secondary: "border-ink bg-sheet text-ink hover:bg-paper",
+  danger: "border-alert bg-alert text-sheet",
 };
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
-  icon?: ReactNode;
   busy?: boolean;
 }
 
-export function Button({ variant = "secondary", icon, busy, disabled, className, children, ...props }: ButtonProps) {
+export function Button({ variant = "secondary", busy, disabled, className, children, ...props }: ButtonProps) {
   return (
     <button
       type="button"
       disabled={disabled || busy}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400",
-        "disabled:cursor-not-allowed disabled:opacity-40",
+        "inline-flex items-center justify-center gap-2 border px-3 py-1.5 font-heading text-sm font-medium",
+        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-friend",
+        "disabled:cursor-not-allowed disabled:opacity-35",
         BUTTON_VARIANTS[variant],
         className,
       )}
       {...props}
     >
-      {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : icon}
+      {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />}
       {children}
     </button>
   );
@@ -98,4 +90,9 @@ export function ConfirmButton({ onConfirm, confirmLabel = "Підтвердит�
       {armed ? confirmLabel : props.children}
     </Button>
   );
+}
+
+/** Small filled square used as a side or state marker next to text. */
+export function Marker({ color, className }: { color: string; className?: string }) {
+  return <span className={cn("inline-block h-2 w-2 shrink-0 border border-ink", className)} style={{ backgroundColor: color }} aria-hidden />;
 }

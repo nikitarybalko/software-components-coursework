@@ -6,13 +6,30 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const SIDE_COLORS: Record<Side, string> = {
-  BLUE: "#60a5fa",
-  RED: "#f87171",
+/** Map palette; mirrors the CSS variables in globals.css because SVG attributes need literal colors. */
+export const MAP_COLORS = {
+  ink: "#1c2318",
+  inkSoft: "#4a5443",
+  inkFaint: "#858a76",
+  sheet: "#f4f0e3",
+  rule: "#b3ab93",
+  ruleSoft: "#d6cfb8",
+  destroyedFill: "#c9c2ad",
+  conditionDamaged: "#d9a200",
+  conditionDestroyed: "#b0281f",
+} as const;
+
+/** APP-6 colour fill for frames. */
+export const SIDE_FILLS: Record<Side, string> = {
+  BLUE: "#80e0ff",
+  RED: "#ff8080",
 };
 
-export const DAMAGED_COLOR = "#fbbf24";
-export const DESTROYED_COLOR = "#64748b";
+/** Darker side colour for lines drawn on paper: zones, trails, detection rings. */
+export const SIDE_COLORS: Record<Side, string> = {
+  BLUE: "#1d5d99",
+  RED: "#b0281f",
+};
 
 export const SIDE_LABELS: Record<Side, string> = {
   BLUE: "Blue Force",
@@ -20,10 +37,10 @@ export const SIDE_LABELS: Record<Side, string> = {
 };
 
 export const STATUS_LABELS: Record<SimulationStatus, string> = {
-  INITIALIZING: "Очікує ініціалізації",
-  ACTIVE: "Активна",
-  PAUSED: "Пауза",
-  STOPPED: "Зупинена",
+  INITIALIZING: "очікує ініціалізації",
+  ACTIVE: "активна",
+  PAUSED: "пауза",
+  STOPPED: "зупинена",
 };
 
 export const UNIT_STATUS_LABELS: Record<UnitStatus, string> = {
@@ -50,25 +67,25 @@ export const STATUS_TONES: Record<SimulationStatus, Tone> = {
 };
 
 export const EVENT_META: Record<EventType, { label: string; tone: Tone }> = {
-  UNIT_DESTROYED: { label: "Знищення", tone: "danger" },
-  UNIT_DAMAGED: { label: "Пошкодження", tone: "warning" },
-  VALIDATION_ERROR: { label: "Валідація", tone: "danger" },
-  TIMEOUT_DISCONNECT: { label: "Тайм-аут", tone: "danger" },
-  SIMULATOR_REGISTERED: { label: "Реєстрація", tone: "success" },
-  SIMULATION_INITIALIZED: { label: "Старт", tone: "success" },
-  SIMULATION_PAUSED: { label: "Пауза", tone: "warning" },
-  SIMULATION_RESUMED: { label: "Продовження", tone: "success" },
-  SIMULATION_RESET: { label: "Скидання", tone: "info" },
-  SNAPSHOT_SAVED: { label: "Snapshot", tone: "neutral" },
-  SNAPSHOT_RESTORED: { label: "Відновлення", tone: "info" },
+  UNIT_DESTROYED: { label: "знищення", tone: "danger" },
+  UNIT_DAMAGED: { label: "ураження", tone: "warning" },
+  VALIDATION_ERROR: { label: "валідація", tone: "danger" },
+  TIMEOUT_DISCONNECT: { label: "тайм-аут", tone: "danger" },
+  SIMULATOR_REGISTERED: { label: "реєстрація", tone: "neutral" },
+  SIMULATION_INITIALIZED: { label: "старт", tone: "success" },
+  SIMULATION_PAUSED: { label: "пауза", tone: "warning" },
+  SIMULATION_RESUMED: { label: "продовження", tone: "success" },
+  SIMULATION_RESET: { label: "скидання", tone: "info" },
+  SNAPSHOT_SAVED: { label: "контр. точка", tone: "neutral" },
+  SNAPSHOT_RESTORED: { label: "відновлення", tone: "info" },
 };
 
-export const TONE_CLASSES: Record<Tone, string> = {
-  neutral: "border-slate-700 bg-slate-800/60 text-slate-300",
-  info: "border-sky-800 bg-sky-950/60 text-sky-300",
-  success: "border-emerald-800 bg-emerald-950/60 text-emerald-300",
-  warning: "border-amber-800 bg-amber-950/60 text-amber-300",
-  danger: "border-rose-800 bg-rose-950/60 text-rose-300",
+export const TONE_TEXT: Record<Tone, string> = {
+  neutral: "text-ink-soft",
+  info: "text-friend",
+  success: "text-condition-ok",
+  warning: "text-caution",
+  danger: "text-alert",
 };
 
 export function unitKey(unit: Pick<Unit, "side" | "id">) {
@@ -81,4 +98,8 @@ export function shortUnitName(unit: Pick<Unit, "id">) {
 
 export function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("uk-UA", { hour12: false });
+}
+
+export function formatTick(tick: number | undefined) {
+  return tick === undefined ? "———" : String(tick).padStart(3, "0");
 }

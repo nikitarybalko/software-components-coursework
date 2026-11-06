@@ -3,14 +3,35 @@
 @tailwind utilities;
 
 :root {
-  --background: #020617;
-  --foreground: #e2e8f0;
-  color-scheme: dark;
+  --paper: #e9e3cf;
+  --sheet: #f4f0e3;
+  --ink: #1c2318;
+  --ink-soft: #4a5443;
+  --ink-faint: #858a76;
+  --rule: #b3ab93;
+  --rule-soft: #d6cfb8;
+  --olive: #47552a;
+
+  --friend-fill: #80e0ff;
+  --friend-line: #1d5d99;
+  --hostile-fill: #ff8080;
+  --hostile-line: #b0281f;
+
+  --condition-ok: #3d7f3a;
+  --caution: #8a6100;
+  --alert: #b0281f;
+
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-plex-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--friend-fill);
+  color: var(--ink);
 }

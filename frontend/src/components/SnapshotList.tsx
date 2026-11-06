@@ -1,7 +1,6 @@
 "use client";
 
-import { Archive, History } from "lucide-react";
-import { SIDE_COLORS, formatTime } from "@/lib/presentation";
+import { formatTick, formatTime } from "@/lib/presentation";
 import type { SnapshotInfo } from "@/lib/types";
 import type { RunAction } from "./ControlPanel";
 import { ConfirmButton, Panel } from "./ui";
@@ -13,39 +12,47 @@ export function SnapshotList({ snapshots, busyAction, onAction, restore }: {
   restore: (snapshotId: string) => Promise<unknown>;
 }) {
   return (
-    <Panel title="Snapshot'и" icon={<Archive className="h-4 w-4" aria-hidden />}
-           actions={<span className="text-xs text-slate-500">{snapshots.length}</span>}>
+    <Panel index={4} title="Контрольні точки" bodyClassName="p-0"
+           aside={<span className="font-mono text-xs text-ink-faint">{snapshots.length}</span>}>
       {snapshots.length === 0 ? (
-        <p className="text-sm text-slate-500">Snapshot'и ще не збережено. Брокер зберігає їх автоматично кожні N тіків.</p>
+        <p className="px-3 py-3 text-sm text-ink-soft">Ще немає. Брокер зберігає точку автоматично кожні кілька тіків.</p>
       ) : (
-        <ul className="-mr-2 max-h-72 space-y-2 overflow-y-auto pr-2">
-          {snapshots.map((snapshot) => {
-            const blue = snapshot.units.filter((unit) => unit.side === "BLUE").length;
-            const red = snapshot.units.length - blue;
-            const actionKey = `restore:${snapshot.id}`;
-            return (
-              <li key={snapshot.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-100">
-                    Тік <span className="font-mono tabular-nums">{snapshot.tickNumber}</span>
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {formatTime(snapshot.createdAt)} ·{" "}
-                    <span style={{ color: SIDE_COLORS.BLUE }}>{blue}</span> /{" "}
-                    <span style={{ color: SIDE_COLORS.RED }}>{red}</span> юнітів
-                  </p>
-                </div>
-                <ConfirmButton className="shrink-0 px-2.5 py-1.5 text-xs" icon={<History className="h-3.5 w-3.5" aria-hidden />}
-                               busy={busyAction === actionKey} confirmLabel={`Тік ${snapshot.tickNumber}?`}
-                               onConfirm={() => onAction(actionKey, () => restore(snapshot.id))}>
-                  Відновити
-                </ConfirmButton>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="max-h-72 overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-sheet">
+              <tr className="border-b border-rule font-heading text-[11px] uppercase text-ink-faint">
+                <th scope="col" className="px-3 py-1.5 text-left font-medium">Тік</th>
+                <th scope="col" className="px-2 py-1.5 text-left font-medium">Час</th>
+                <th scope="col" className="px-2 py-1.5 text-right font-medium">B / R</th>
+                <th scope="col" className="px-3 py-1.5"><span className="sr-only">Дія</span></th>
+              </tr>
+            </thead>
+            <tbody className="font-mono tabular-nums">
+              {snapshots.map((snapshot) => {
+                const blue = snapshot.units.filter((unit) => unit.side === "BLUE").length;
+                const actionKey = `restore:${snapshot.id}`;
+                return (
+                  <tr key={snapshot.id} className="border-b border-rule-soft last:border-b-0">
+                    <td className="px-3 py-1">{formatTick(snapshot.tickNumber)}</td>
+                    <td className="px-2 py-1 text-ink-soft">{formatTime(snapshot.createdAt)}</td>
+                    <td className="px-2 py-1 text-right text-ink-soft">{blue} / {snapshot.units.length - blue}</td>
+                    <td className="px-3 py-1 text-right">
+                      <ConfirmButton className="px-2 py-0.5 text-xs" busy={busyAction === actionKey}
+                                     confirmLabel={`Тік ${snapshot.tickNumber}?`}
+                                     onConfirm={() => onAction(actionKey, () => restore(snapshot.id))}>
+                        Відновити
+                      </ConfirmButton>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
-      <p className="mt-3 text-xs text-slate-500">Після відновлення симуляція стоїть на паузі. Натисніть «Продовжити».</p>
+      <p className="border-t border-rule px-3 py-1.5 text-xs text-ink-soft">
+        Після відновлення сесія стоїть на паузі до команди «Продовжити».
+      </p>
     </Panel>
   );
 }

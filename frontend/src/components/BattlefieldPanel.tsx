@@ -1,27 +1,28 @@
 "use client";
 
-import { Crosshair } from "lucide-react";
+import type { ReactNode } from "react";
 import type { Trails } from "@/hooks/useUnitTrails";
-import { DAMAGED_COLOR, DESTROYED_COLOR, SIDE_COLORS, cn } from "@/lib/presentation";
+import { MAP_COLORS, SIDE_COLORS, SIDE_FILLS, cn } from "@/lib/presentation";
 import type { Battlefield } from "@/lib/types";
 import { BattlefieldMap, type ViewMode } from "./BattlefieldMap";
 import { Panel } from "./ui";
 
 const VIEW_MODES: { value: ViewMode; label: string; hint: string }[] = [
-  { value: "ARBITER", label: "Арбітр", hint: "Повна картина: усі юніти та всі зони огляду" },
-  { value: "BLUE", label: "Очима Blue", hint: "Лише те, що брокер повертає симулятору Blue Force" },
-  { value: "RED", label: "Очима Red", hint: "Лише те, що брокер повертає симулятору Red Force" },
+  { value: "ARBITER", label: "Арбітр", hint: "Повна обстановка: усі юніти та всі зони огляду." },
+  { value: "BLUE", label: "Очима Blue", hint: "Лише те, що брокер повертає симулятору Blue Force. Заштриховане поза зоною огляду." },
+  { value: "RED", label: "Очима Red", hint: "Лише те, що брокер повертає симулятору Red Force. Заштриховане поза зоною огляду." },
 ];
 
 function ViewModeSwitch({ value, onChange }: { value: ViewMode; onChange: (mode: ViewMode) => void }) {
   return (
-    <div role="radiogroup" aria-label="Режим перегляду" className="flex rounded-lg border border-slate-700 bg-slate-950 p-0.5">
-      {VIEW_MODES.map((mode) => (
-        <button key={mode.value} type="button" role="radio" aria-checked={value === mode.value} title={mode.hint}
+    <div role="radiogroup" aria-label="Режим перегляду" className="flex border border-ink">
+      {VIEW_MODES.map((mode, index) => (
+        <button key={mode.value} type="button" role="radio" aria-checked={value === mode.value}
                 onClick={() => onChange(mode.value)}
                 className={cn(
-                  "whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                  value === mode.value ? "bg-slate-700 text-white" : "text-slate-400 hover:text-slate-200",
+                  "whitespace-nowrap px-2.5 py-0.5 font-heading text-xs font-medium",
+                  index > 0 && "border-l border-ink",
+                  value === mode.value ? "bg-ink text-sheet" : "bg-sheet text-ink hover:bg-paper",
                 )}>
           {mode.label}
         </button>
@@ -30,72 +31,70 @@ function ViewModeSwitch({ value, onChange }: { value: ViewMode; onChange: (mode:
   );
 }
 
-function LegendItem({ children, label }: { children: React.ReactNode; label: string }) {
+const INK = MAP_COLORS.ink;
+
+function LegendItem({ children, label }: { children: ReactNode; label: string }) {
   return (
     <li className="flex items-center gap-1.5">
-      <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden>{children}</svg>
+      <svg viewBox="0 0 18 14" className="h-3.5 w-[18px] shrink-0" aria-hidden>{children}</svg>
       {label}
     </li>
   );
 }
 
-const NEUTRAL_STROKE = "#cbd5e1";
-
-function TypeIcon({ children }: { children: React.ReactNode }) {
+function FriendFrame({ fill = SIDE_FILLS.BLUE, children }: { fill?: string; children?: ReactNode }) {
   return (
     <>
-      <rect x="2" y="4" width="12" height="8" fill="none" stroke={NEUTRAL_STROKE} strokeWidth="1.2" />
+      <rect x="2" y="2.5" width="14" height="9" fill={fill} stroke={INK} strokeWidth="1" />
       {children}
     </>
   );
 }
 
-function Legend() {
+function LegendGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="mt-3 space-y-1.5 text-xs text-slate-400">
-      <ul className="flex flex-wrap gap-x-4 gap-y-1.5">
-        <LegendItem label="Blue Force">
-          <rect x="2" y="4" width="12" height="8" fill={SIDE_COLORS.BLUE} fillOpacity="0.3" stroke={SIDE_COLORS.BLUE} strokeWidth="1.5" />
-        </LegendItem>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+      <span className="w-16 shrink-0 font-heading text-[11px] font-medium uppercase text-ink-faint">{title}</span>
+      <ul className="flex flex-wrap gap-x-4 gap-y-1">{children}</ul>
+    </div>
+  );
+}
+
+function Legend() {
+  const cross = <path d="M2 2.5 L16 11.5 M16 2.5 L2 11.5" stroke={INK} strokeWidth="1" />;
+  const track = <ellipse cx="9" cy="7" rx="4.2" ry="2" fill="none" stroke={INK} strokeWidth="1" />;
+
+  return (
+    <div className="space-y-1.5 border-t border-ink px-3 py-2 text-xs text-ink-soft">
+      <LegendGroup title="Сторона">
+        <LegendItem label="Blue Force"><FriendFrame /></LegendItem>
         <LegendItem label="Red Force">
-          <polygon points="8,2 14,8 8,14 2,8" fill={SIDE_COLORS.RED} fillOpacity="0.3" stroke={SIDE_COLORS.RED} strokeWidth="1.5" />
+          <polygon points="9,1 15,7 9,13 3,7" fill={SIDE_FILLS.RED} stroke={INK} strokeWidth="1" />
         </LegendItem>
         <LegendItem label="Зона огляду">
-          <circle cx="8" cy="8" r="6" fill="#94a3b8" fillOpacity="0.1" stroke="#94a3b8" strokeDasharray="2 2" />
+          <circle cx="9" cy="7" r="5.5" fill={SIDE_FILLS.BLUE} fillOpacity="0.2" stroke={SIDE_COLORS.BLUE} strokeDasharray="2 1.5" />
         </LegendItem>
         <LegendItem label="Виявлений противником">
-          <circle cx="8" cy="8" r="6" fill="none" stroke="#e2e8f0" strokeDasharray="2 2" />
+          <circle cx="9" cy="7" r="5.5" fill="none" stroke={SIDE_COLORS.RED} strokeDasharray="1.5 1.5" />
         </LegendItem>
-        <LegendItem label="Пошкоджений (радіус ×0.5)">
-          <rect x="2" y="4" width="12" height="8" fill="none" stroke={DAMAGED_COLOR} strokeWidth="1.5" />
+      </LegendGroup>
+      <LegendGroup title="Тип">
+        <LegendItem label="танковий"><FriendFrame>{track}</FriendFrame></LegendItem>
+        <LegendItem label="мех. піхота"><FriendFrame>{cross}{track}</FriendFrame></LegendItem>
+        <LegendItem label="піхота"><FriendFrame>{cross}</FriendFrame></LegendItem>
+        <LegendItem label="розвідка"><FriendFrame><path d="M2 11.5 L16 2.5" stroke={INK} strokeWidth="1" /></FriendFrame></LegendItem>
+        <LegendItem label="невідомий"><FriendFrame /></LegendItem>
+      </LegendGroup>
+      <LegendGroup title="Стан">
+        <LegendItem label="пошкоджений, огляд ×0.5">
+          <rect x="2" y="1" width="14" height="7" fill={SIDE_FILLS.BLUE} stroke={INK} strokeWidth="1" />
+          <rect x="2" y="10" width="14" height="3" fill={MAP_COLORS.conditionDamaged} stroke={INK} strokeWidth="0.6" />
         </LegendItem>
-        <LegendItem label="Знищений">
-          <rect x="2" y="5" width="10" height="7" fill={DESTROYED_COLOR} fillOpacity="0.3" stroke={DESTROYED_COLOR}
-                strokeWidth="1.5" strokeDasharray="2 1.5" />
-          <circle cx="13" cy="4" r="2.6" fill="#0b1222" stroke={DESTROYED_COLOR} strokeWidth="0.8" />
-          <path d="M11.8 2.8 L14.2 5.2 M14.2 2.8 L11.8 5.2" stroke="#e2e8f0" strokeWidth="0.8" />
+        <LegendItem label="знищений">
+          <rect x="2" y="1" width="14" height="7" fill={MAP_COLORS.destroyedFill} stroke={INK} strokeWidth="1" />
+          <rect x="2" y="10" width="14" height="3" fill={MAP_COLORS.conditionDestroyed} stroke={INK} strokeWidth="0.6" />
         </LegendItem>
-      </ul>
-      <ul className="flex flex-wrap gap-x-4 gap-y-1.5" aria-label="Типи підрозділів">
-        <LegendItem label="Танковий">
-          <TypeIcon><ellipse cx="8" cy="8" rx="3.6" ry="1.8" fill="none" stroke={NEUTRAL_STROKE} strokeWidth="1.2" /></TypeIcon>
-        </LegendItem>
-        <LegendItem label="Механізована піхота">
-          <TypeIcon>
-            <path d="M2 4 L14 12 M14 4 L2 12" stroke={NEUTRAL_STROKE} strokeWidth="1.2" />
-            <ellipse cx="8" cy="8" rx="3.6" ry="1.8" fill="none" stroke={NEUTRAL_STROKE} strokeWidth="1.2" />
-          </TypeIcon>
-        </LegendItem>
-        <LegendItem label="Піхота">
-          <TypeIcon><path d="M2 4 L14 12 M14 4 L2 12" stroke={NEUTRAL_STROKE} strokeWidth="1.2" /></TypeIcon>
-        </LegendItem>
-        <LegendItem label="Розвідка">
-          <TypeIcon><path d="M2 12 L14 4" stroke={NEUTRAL_STROKE} strokeWidth="1.2" /></TypeIcon>
-        </LegendItem>
-        <LegendItem label="Тип невідомий">
-          <TypeIcon>{null}</TypeIcon>
-        </LegendItem>
-      </ul>
+      </LegendGroup>
     </div>
   );
 }
@@ -109,9 +108,9 @@ export function BattlefieldPanel({ battlefield, trails, viewMode, onViewModeChan
   const hint = VIEW_MODES.find((mode) => mode.value === viewMode)?.hint;
 
   return (
-    <Panel title="Поле бою" icon={<Crosshair className="h-4 w-4" aria-hidden />}
-           actions={<ViewModeSwitch value={viewMode} onChange={onViewModeChange} />}>
-      <p className="mb-3 text-xs text-slate-500">{hint}</p>
+    <Panel index={1} title="Обстановка" bodyClassName="p-0"
+           aside={<ViewModeSwitch value={viewMode} onChange={onViewModeChange} />}>
+      <p className="border-b border-rule-soft px-3 py-1 text-xs text-ink-soft">{hint}</p>
       <BattlefieldMap battlefield={battlefield} trails={trails} viewMode={viewMode} />
       <Legend />
     </Panel>

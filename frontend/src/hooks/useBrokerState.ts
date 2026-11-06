@@ -12,6 +12,7 @@ export interface BrokerState {
   snapshots: SnapshotInfo[];
   events: EventLogEntry[];
   connectionError: string | null;
+  lastUpdate: Date | null;
   refresh: () => Promise<void>;
 }
 
@@ -21,6 +22,7 @@ export function useBrokerState(): BrokerState {
   const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([]);
   const [events, setEvents] = useState<EventLogEntry[]>([]);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   const refreshLive = useCallback(async () => {
     try {
@@ -28,6 +30,7 @@ export function useBrokerState(): BrokerState {
       setStatus(nextStatus);
       setBattlefield(nextBattlefield);
       setConnectionError(null);
+      setLastUpdate(new Date());
     } catch (error) {
       setConnectionError(error instanceof Error ? error.message : "Брокер недоступний");
     }
@@ -46,5 +49,5 @@ export function useBrokerState(): BrokerState {
     await Promise.all([refreshLive(), refreshHistory().catch(() => undefined)]);
   }, [refreshLive, refreshHistory]);
 
-  return { status, battlefield, snapshots, events, connectionError, refresh };
+  return { status, battlefield, snapshots, events, connectionError, lastUpdate, refresh };
 }
