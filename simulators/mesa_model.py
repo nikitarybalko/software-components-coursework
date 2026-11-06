@@ -42,22 +42,26 @@ class TacticalUnitAgent(mesa.Agent):
         if self.status == "DESTROYED" or self.pos is None:
             return
 
-        visible_enemies = self.model.visible_enemies
-        self._resolve_combat(visible_enemies)
+        threats = self._active_threats()
+        self._resolve_combat(threats)
         if self.status == "DESTROYED":
             return
 
         effective_speed = self.speed * 0.5 if self.status == "DAMAGED" else self.speed
 
-        if visible_enemies:
-            # Maneuver towards nearest spotted enemy
-            nearest = min(visible_enemies, key=lambda e: self.distance_to(e["x"], e["y"]))
+        if threats:
+            # Maneuver towards nearest operational enemy
+            nearest = min(threats, key=lambda e: self.distance_to(e["x"], e["y"]))
             self._move_towards(nearest["x"], nearest["y"], effective_speed, min_standoff=10.0)
         else:
             # Tactical march across the battlefield
             target_x = self.pos[0] + (effective_speed * 1.5 if self.side == "BLUE" else -effective_speed * 1.5)
             target_y = self.pos[1] + random.uniform(-1.0, 1.0)
             self._move_towards(target_x, target_y, effective_speed, min_standoff=0.0)
+
+    def _active_threats(self) -> List[Dict]:
+        """Spotted enemies that can still fight; wrecks stay visible but are neither targets nor threats."""
+        return [enemy for enemy in self.model.visible_enemies if enemy.get("status") != "DESTROYED"]
 
     def _move_towards(self, target_x: float, target_y: float, speed: float, min_standoff: float):
         dist = self.distance_to(target_x, target_y)
