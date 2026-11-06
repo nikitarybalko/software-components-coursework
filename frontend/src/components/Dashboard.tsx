@@ -14,7 +14,7 @@ import { StatusHeader } from "./StatusHeader";
 
 export function Dashboard() {
   const { status, battlefield, snapshots, events, connectionError, refresh } = useBrokerState();
-  const trails = useUnitTrails(battlefield);
+  const trails = useUnitTrails(battlefield, status?.epoch);
   const [viewMode, setViewMode] = useState<ViewMode>("ARBITER");
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);

@@ -4,6 +4,7 @@ import com.nikitarybalko.wargamebroker.domain.model.Side;
 import com.nikitarybalko.wargamebroker.domain.model.UnitState;
 import com.nikitarybalko.wargamebroker.domain.service.TickManager;
 import com.nikitarybalko.wargamebroker.web.dto.FogOfWarResponse;
+import com.nikitarybalko.wargamebroker.web.dto.OwnUnitsResponse;
 import com.nikitarybalko.wargamebroker.web.dto.SimulationStatusResponse;
 import com.nikitarybalko.wargamebroker.web.dto.SubmitUnitsRequest;
 import com.nikitarybalko.wargamebroker.web.dto.SubmitUnitsResponse;
@@ -113,6 +114,32 @@ public class TickController {
     @GetMapping("/current")
     public ResponseEntity<SimulationStatusResponse> getCurrentTickStatus() {
         return ResponseEntity.ok(statusMapper.currentStatus());
+    }
+
+    @Operation(summary = "Get own units as known to the broker",
+            description = "Returns the latest unit states of the requesting force. After a snapshot restore these are the "
+                    + "restored states, so simulators call this endpoint whenever the state epoch changes.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Own units retrieved successfully"),
+            @ApiResponse(responseCode = "400", description = "Admin request without side parameter"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: Cannot access opponent units")
+    })
+    @GetMapping("/current/units")
+    public ResponseEntity<OwnUnitsResponse> getOwnUnits(
+            HttpServletRequest request,
+            @RequestParam(required = false) Side side) {
+
+        Side targetSide = resolveRequestedSide(request, side);
+        SecurityUtils.validateSideAccess(request, targetSide);
+
+        OwnUnitsResponse response = OwnUnitsResponse.builder()
+                .tickNumber(tickManager.getCurrentTick())
+                .epoch(tickManager.getEpoch())
+                .side(targetSide)
+                .units(tickManager.getLatestUnits(targetSide).stream().map(UnitDto::fromDomain).toList())
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 
     private Side determineAndValidateSubmittingSide(HttpServletRequest request, SubmitUnitsRequest payload) {

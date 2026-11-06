@@ -40,6 +40,7 @@ export interface SimulationStatusInfo {
   currentTick: number;
   status: SimulationStatus;
   tickComplete: boolean;
+  epoch: number;
   registeredSides: Side[];
   submittedSides: Side[];
 }

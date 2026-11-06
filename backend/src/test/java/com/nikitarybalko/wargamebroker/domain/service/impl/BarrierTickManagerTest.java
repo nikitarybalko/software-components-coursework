@@ -234,6 +234,22 @@ class BarrierTickManagerTest {
         verify(checkpointingService, never()).recordEvent(any(), eq(Side.BLUE), anyString());
     }
 
+    @Test
+    @DisplayName("State epoch increments on reset and restore, after restored units are in place")
+    void testEpochIncrementsOnResetAndRestore() {
+        long initialEpoch = tickManager.getEpoch();
+        UnitState restoredBlue = new UnitState("b1", Side.BLUE, 42.0, 7.0, 10.0, UnitStatus.DAMAGED);
+
+        tickManager.reset();
+        assertEquals(initialEpoch + 1, tickManager.getEpoch());
+
+        tickManager.restoreState(8, List.of(restoredBlue));
+        assertEquals(initialEpoch + 2, tickManager.getEpoch());
+        assertEquals(9, tickManager.getCurrentTick());
+        assertEquals(List.of(restoredBlue), tickManager.getLatestUnits(Side.BLUE));
+        assertTrue(tickManager.getLatestUnits(Side.RED).isEmpty());
+    }
+
     private void submitBothSides(long tick, UnitState blue, UnitState red) {
         tickManager.submitUnits(Side.BLUE, tick, List.of(blue));
         tickManager.submitUnits(Side.RED, tick, List.of(red));

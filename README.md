@@ -104,3 +104,4 @@ cd frontend && cp .env.example .env.local && npm install && npm run dev
 2. Адміністратор викликає `POST /api/v1/simulation/init`.
 3. Кожен тік: `POST /api/v1/simulation/ticks/submit`, потім опитування `GET /api/v1/simulation/ticks/{tick}/fog-of-war`. Поки суперник не відправив свій хід, endpoint повертає 409.
 4. Якщо жодна зі сторін не відповідає довше за тайм-аут (10 с), симуляція автоматично переходить у `PAUSED`.
+5. Статус містить `epoch`, який збільшується після кожних init, reset і відновлення зі snapshot'а. Побачивши нове значення, симулятор запитує `GET /api/v1/simulation/ticks/current/units` і замінює свої локальні юніти відповіддю брокера. Порожній список означає новий бій: юніти повертаються на стартові позиції.

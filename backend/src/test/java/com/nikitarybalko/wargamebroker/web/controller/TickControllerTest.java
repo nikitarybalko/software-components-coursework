@@ -230,6 +230,40 @@ class TickControllerTest {
                 .andExpect(status().isConflict());
     }
 
+    @Test
+    @DisplayName("Own units endpoint returns latest units of the authenticated force")
+    void getOwnUnitsForAuthenticatedSide() throws Exception {
+        UnitState blue = new UnitState("b1", Side.BLUE, 40.0, 60.0, 50.0, UnitStatus.DAMAGED);
+        when(tickManager.getCurrentTick()).thenReturn(9L);
+        when(tickManager.getEpoch()).thenReturn(3L);
+        when(tickManager.getLatestUnits(Side.BLUE)).thenReturn(List.of(blue));
+
+        mockMvc.perform(get("/api/v1/simulation/ticks/current/units")
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, BLUE_KEY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.side").value("BLUE"))
+                .andExpect(jsonPath("$.tickNumber").value(9))
+                .andExpect(jsonPath("$.epoch").value(3))
+                .andExpect(jsonPath("$.units[0].id").value("b1"))
+                .andExpect(jsonPath("$.units[0].status").value("DAMAGED"));
+    }
+
+    @Test
+    @DisplayName("Own units endpoint returns 403 when Blue requests Red units")
+    void getOwnUnitsForOpponentIsForbidden() throws Exception {
+        mockMvc.perform(get("/api/v1/simulation/ticks/current/units?side=RED")
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, BLUE_KEY))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Own units endpoint requires side parameter for admin requests")
+    void getOwnUnitsAdminWithoutSideReturnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/simulation/ticks/current/units")
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+                .andExpect(status().isBadRequest());
+    }
+
     private UnitDto createUnitDto(String id, Side side, double x, double y, double radius, UnitStatus status) {
         return UnitDto.builder()
                 .id(id)

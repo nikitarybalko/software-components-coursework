@@ -11,6 +11,11 @@ public interface TickManager {
 
     long getCurrentTick();
 
+    /**
+     * Incremented after every reset and restore, so clients can detect that the broker state was replaced.
+     */
+    long getEpoch();
+
     SimulationStatus getStatus();
 
     void setStatus(SimulationStatus status);

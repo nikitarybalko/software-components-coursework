@@ -175,6 +175,7 @@ class SimulationFullFlowIntegrationTest extends AbstractPostgresIntegrationTest 
     @Test
     @DisplayName("Snapshot persisted in PostgreSQL restores battlefield and tick counter")
     void testRestoreFromPersistedSnapshot() throws Exception {
+        long epochBeforeRestore = currentEpoch();
         for (long tick = 1; tick <= 4; tick++) {
             submitUnit(BLUE_KEY, "blue-1", Side.BLUE, tick, tick * 10.0);
             submitUnit(RED_KEY, "red-1", Side.RED, tick, 300.0 - tick * 10.0);
@@ -204,6 +205,13 @@ class SimulationFullFlowIntegrationTest extends AbstractPostgresIntegrationTest 
         assertEquals(40.0, objectMapper.readTree(fullStateJson).get("blueUnits").get(0).get("x").asDouble());
         assertEquals(260.0, objectMapper.readTree(fullStateJson).get("redUnits").get(0).get("x").asDouble());
 
+        mockMvc.perform(get("/api/v1/simulation/ticks/current/units")
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, BLUE_KEY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.epoch").value(epochBeforeRestore + 1))
+                .andExpect(jsonPath("$.units.length()").value(1))
+                .andExpect(jsonPath("$.units[0].x").value(40.0));
+
         mockMvc.perform(post("/api/v1/simulation/resume")
                         .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
                 .andExpect(status().isOk())
@@ -215,6 +223,13 @@ class SimulationFullFlowIntegrationTest extends AbstractPostgresIntegrationTest 
         mockMvc.perform(get("/api/v1/simulation/status")
                         .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
                 .andExpect(jsonPath("$.currentTick").value(6));
+    }
+
+    private long currentEpoch() throws Exception {
+        String statusJson = mockMvc.perform(get("/api/v1/simulation/status")
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, ADMIN_KEY))
+                .andReturn().getResponse().getContentAsString();
+        return objectMapper.readTree(statusJson).get("epoch").asLong();
     }
 
     private void submitUnit(String apiKey, String unitId, Side side, long tick, double x) throws Exception {

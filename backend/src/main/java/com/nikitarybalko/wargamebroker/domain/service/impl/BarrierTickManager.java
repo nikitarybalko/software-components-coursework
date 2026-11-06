@@ -49,6 +49,7 @@ public class BarrierTickManager implements TickManager {
     private int snapshotInterval;
 
     private volatile long currentTick = 1;
+    private volatile long epoch = 0;
     private volatile SimulationStatus status = SimulationStatus.INITIALIZING;
     private volatile Instant lastSubmitTime = Instant.now();
 
@@ -68,6 +69,11 @@ public class BarrierTickManager implements TickManager {
     @Override
     public long getCurrentTick() {
         return currentTick;
+    }
+
+    @Override
+    public long getEpoch() {
+        return epoch;
     }
 
     @Override
@@ -143,20 +149,14 @@ public class BarrierTickManager implements TickManager {
 
     @Override
     public synchronized void reset() {
-        currentTick = 1;
-        status = SimulationStatus.INITIALIZING;
-        lastSubmitTime = Instant.now();
-        Stream.of(submissions, visibleEnemies)
-                .flatMap(storage -> storage.values().stream())
-                .forEach(Map::clear);
-        latestUnits.clear();
-        knownUnitStatuses.clear();
-        log.info("BarrierTickManager reset successfully");
+        clearState();
+        epoch++;
+        log.info("BarrierTickManager reset successfully, state epoch {}", epoch);
     }
 
     @Override
     public synchronized void restoreState(long tickNumber, List<UnitState> units) {
-        reset();
+        clearState();
         currentTick = tickNumber + 1;
 
         List<UnitState> restoredUnits = Objects.isNull(units) ? Collections.emptyList() : units;
@@ -165,7 +165,19 @@ public class BarrierTickManager implements TickManager {
         rememberUnitStatuses(restoredUnits);
 
         setStatus(SimulationStatus.PAUSED);
-        log.info("Restored simulation state at tick {}, next tick will be {}", tickNumber, currentTick);
+        epoch++;
+        log.info("Restored simulation state at tick {}, next tick will be {}, state epoch {}", tickNumber, currentTick, epoch);
+    }
+
+    private void clearState() {
+        currentTick = 1;
+        status = SimulationStatus.INITIALIZING;
+        lastSubmitTime = Instant.now();
+        Stream.of(submissions, visibleEnemies)
+                .flatMap(storage -> storage.values().stream())
+                .forEach(Map::clear);
+        latestUnits.clear();
+        knownUnitStatuses.clear();
     }
 
     private static Map<Side, Map<Long, List<UnitState>>> createPerSideStorage() {

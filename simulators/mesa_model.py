@@ -103,6 +103,8 @@ class TacticalWargameModel(mesa.Model):
         self.visible_enemies: List[Dict] = []
         self.current_tick: int = 1
         self.submitted_current_tick: bool = False
+        self.state_epoch: Optional[int] = None
+        self.initial_deployment: Dict[str, Tuple[float, float]] = {}
 
         self.session = requests.Session()
         self.session.headers.update({
@@ -116,7 +118,11 @@ class TacticalWargameModel(mesa.Model):
     def add_tactical_unit(self, unit_id: str, x: float, y: float, view_radius: float, speed: float = 3.5):
         unit = TacticalUnitAgent(self, unit_id=unit_id, side=self.side, view_radius=view_radius, speed=speed)
         self.space.place_agent(unit, (x, y))
+        self.initial_deployment[unit_id] = (x, y)
         return unit
+
+    def tactical_units(self) -> List[TacticalUnitAgent]:
+        return [agent for agent in self.agents if isinstance(agent, TacticalUnitAgent)]
 
     def wait_for_broker(self, timeout_sec: int = 30) -> bool:
         start = time.time()
@@ -153,10 +159,53 @@ class TacticalWargameModel(mesa.Model):
                 self.submitted_current_tick = self.side in data.get("submittedSides", [])
                 if self.side not in data.get("registeredSides", []):
                     self.register()
+                self._sync_state_epoch(data.get("epoch"))
                 return data.get("status")
         except requests.RequestException as e:
             self.log(f"Error checking lifecycle status: {e}")
         return None
+
+    def _sync_state_epoch(self, epoch: Optional[int]):
+        if epoch is None or epoch == self.state_epoch:
+            return
+        if self.state_epoch is None or self.resync_units_with_broker():
+            self.state_epoch = epoch
+
+    def resync_units_with_broker(self) -> bool:
+        """
+        Replaces local agent states with the broker's view after init, reset or snapshot restore.
+        An empty unit list means a new battle, so agents return to their initial deployment.
+        """
+        try:
+            res = self.session.get(f"{self.broker_url}/api/v1/simulation/ticks/current/units", timeout=3)
+            if res.status_code != 200:
+                self.log(f"State resync failed ({res.status_code}): {res.text}")
+                return False
+            units = res.json().get("units", [])
+        except requests.RequestException as e:
+            self.log(f"State resync error: {e}")
+            return False
+
+        self.visible_enemies = []
+        if units:
+            self._apply_broker_units({unit["id"]: unit for unit in units})
+            self.log(f"Broker state changed: restored {len(units)} units from snapshot.")
+        else:
+            self._redeploy_initial_positions()
+            self.log("Broker state changed: new battle, units returned to initial deployment.")
+        return True
+
+    def _apply_broker_units(self, units_by_id: Dict[str, Dict]):
+        for agent in self.tactical_units():
+            state = units_by_id.get(agent.unit_id)
+            if state is not None:
+                self.space.move_agent(agent, (float(state["x"]), float(state["y"])))
+                agent.status = state["status"]
+
+    def _redeploy_initial_positions(self):
+        for agent in self.tactical_units():
+            self.space.move_agent(agent, self.initial_deployment[agent.unit_id])
+            agent.status = "HEALTHY"
 
     def step(self):
         """
@@ -171,16 +220,11 @@ class TacticalWargameModel(mesa.Model):
             return
 
         # 1. Step all agents in the Mesa model
-        for agent in list(self.agents):
-            if isinstance(agent, TacticalUnitAgent):
-                agent.step()
+        for agent in self.tactical_units():
+            agent.step()
 
         # 2. Package and submit current tick payload
-        unit_payloads = [
-            agent.to_dict()
-            for agent in self.agents
-            if isinstance(agent, TacticalUnitAgent)
-        ]
+        unit_payloads = [agent.to_dict() for agent in self.tactical_units()]
 
         submit_body = {
             "tickNumber": self.current_tick,

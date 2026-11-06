@@ -19,6 +19,7 @@ public class SimulationStatusMapper {
                 .currentTick(currentTick)
                 .status(tickManager.getStatus())
                 .tickComplete(tickManager.isTickComplete(currentTick))
+                .epoch(tickManager.getEpoch())
                 .registeredSides(simulatorRegistry.getRegisteredSides())
                 .submittedSides(tickManager.getSubmittedSides(currentTick))
                 .build();

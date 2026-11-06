@@ -26,6 +26,10 @@ public class SimulationStatusResponse {
     @Schema(description = "Whether the current tick has concluded", example = "false")
     private boolean tickComplete;
 
+    @Schema(description = "State epoch, incremented on every init, reset and snapshot restore. "
+            + "Simulators resync their local units when it changes", example = "3")
+    private long epoch;
+
     @Schema(description = "Sides whose simulators are registered with the broker", example = "[\"BLUE\", \"RED\"]")
     private Set<Side> registeredSides;
 
