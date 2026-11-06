@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { useBrokerState } from "@/hooks/useBrokerState";
 import { useUnitTrails } from "@/hooks/useUnitTrails";
 import { brokerApi } from "@/lib/api";
-import type { ViewMode } from "./BattlefieldMap";
+import type { ViewMode } from "./map/BattlefieldMap";
 import { BattlefieldPanel } from "./BattlefieldPanel";
 import { ControlPanel, type RunAction } from "./ControlPanel";
 import { EventLog } from "./EventLog";

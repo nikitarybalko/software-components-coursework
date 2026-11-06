@@ -2,9 +2,10 @@
 
 import type { ReactNode } from "react";
 import type { Trails } from "@/hooks/useUnitTrails";
-import { MAP_COLORS, SIDE_COLORS, SIDE_FILLS, cn } from "@/lib/presentation";
-import type { Battlefield } from "@/lib/types";
-import { BattlefieldMap, type ViewMode } from "./BattlefieldMap";
+import { MAP_COLORS, SIDE_COLORS, SIDE_FILLS, UNIT_TYPE_LABELS, cn } from "@/lib/presentation";
+import type { Battlefield, UnitType } from "@/lib/types";
+import { BattlefieldMap, type ViewMode } from "./map/BattlefieldMap";
+import { UnitPictogram } from "./map/UnitSymbols";
 import { Panel } from "./ui";
 
 const VIEW_MODES: { value: ViewMode; label: string; hint: string }[] = [
@@ -12,6 +13,9 @@ const VIEW_MODES: { value: ViewMode; label: string; hint: string }[] = [
   { value: "BLUE", label: "Очима Blue", hint: "Лише те, що брокер повертає симулятору Blue Force. Заштриховане поза зоною огляду." },
   { value: "RED", label: "Очима Red", hint: "Лише те, що брокер повертає симулятору Red Force. Заштриховане поза зоною огляду." },
 ];
+
+const LEGEND_TYPES: UnitType[] = ["ARMOR", "MECHANIZED_INFANTRY", "INFANTRY", "RECON", "UNKNOWN"];
+const INK = MAP_COLORS.ink;
 
 function ViewModeSwitch({ value, onChange }: { value: ViewMode; onChange: (mode: ViewMode) => void }) {
   return (
@@ -31,24 +35,17 @@ function ViewModeSwitch({ value, onChange }: { value: ViewMode; onChange: (mode:
   );
 }
 
-const INK = MAP_COLORS.ink;
-
 function LegendItem({ children, label }: { children: ReactNode; label: string }) {
   return (
     <li className="flex items-center gap-1.5">
-      <svg viewBox="0 0 18 14" className="h-3.5 w-[18px] shrink-0" aria-hidden>{children}</svg>
+      <svg viewBox="0 0 22 16" className="h-4 w-[22px] shrink-0" aria-hidden>{children}</svg>
       {label}
     </li>
   );
 }
 
-function FriendFrame({ fill = SIDE_FILLS.BLUE, children }: { fill?: string; children?: ReactNode }) {
-  return (
-    <>
-      <rect x="2" y="2.5" width="14" height="9" fill={fill} stroke={INK} strokeWidth="1" />
-      {children}
-    </>
-  );
+function FriendFrame({ fill = SIDE_FILLS.BLUE, height = 13 }: { fill?: string; height?: number }) {
+  return <rect x="1" y="1.5" width="20" height={height} fill={fill} stroke={INK} strokeWidth="1" />;
 }
 
 function LegendGroup({ title, children }: { title: string; children: ReactNode }) {
@@ -61,38 +58,36 @@ function LegendGroup({ title, children }: { title: string; children: ReactNode }
 }
 
 function Legend() {
-  const cross = <path d="M2 2.5 L16 11.5 M16 2.5 L2 11.5" stroke={INK} strokeWidth="1" />;
-  const track = <ellipse cx="9" cy="7" rx="4.2" ry="2" fill="none" stroke={INK} strokeWidth="1" />;
-
   return (
     <div className="space-y-1.5 border-t border-ink px-3 py-2 text-xs text-ink-soft">
       <LegendGroup title="Сторона">
         <LegendItem label="Blue Force"><FriendFrame /></LegendItem>
         <LegendItem label="Red Force">
-          <polygon points="9,1 15,7 9,13 3,7" fill={SIDE_FILLS.RED} stroke={INK} strokeWidth="1" />
+          <polygon points="11,1 18,8 11,15 4,8" fill={SIDE_FILLS.RED} stroke={INK} strokeWidth="1" />
         </LegendItem>
         <LegendItem label="Зона огляду">
-          <circle cx="9" cy="7" r="5.5" fill={SIDE_FILLS.BLUE} fillOpacity="0.2" stroke={SIDE_COLORS.BLUE} strokeDasharray="2 1.5" />
+          <circle cx="11" cy="8" r="6.5" fill={SIDE_FILLS.BLUE} fillOpacity="0.2" stroke={SIDE_COLORS.BLUE} strokeDasharray="2 1.5" />
         </LegendItem>
         <LegendItem label="Виявлений противником">
-          <circle cx="9" cy="7" r="5.5" fill="none" stroke={SIDE_COLORS.RED} strokeDasharray="1.5 1.5" />
+          <circle cx="11" cy="8" r="6.5" fill="none" stroke={SIDE_COLORS.RED} strokeDasharray="1.5 1.5" />
         </LegendItem>
       </LegendGroup>
       <LegendGroup title="Тип">
-        <LegendItem label="танковий"><FriendFrame>{track}</FriendFrame></LegendItem>
-        <LegendItem label="мех. піхота"><FriendFrame>{cross}{track}</FriendFrame></LegendItem>
-        <LegendItem label="піхота"><FriendFrame>{cross}</FriendFrame></LegendItem>
-        <LegendItem label="розвідка"><FriendFrame><path d="M2 11.5 L16 2.5" stroke={INK} strokeWidth="1" /></FriendFrame></LegendItem>
-        <LegendItem label="невідомий"><FriendFrame /></LegendItem>
+        {LEGEND_TYPES.map((type) => (
+          <LegendItem key={type} label={UNIT_TYPE_LABELS[type]}>
+            <FriendFrame />
+            <UnitPictogram type={type} box={{ cx: 11, cy: 8, halfWidth: 9.5, halfHeight: 6.3 }} color={INK} hole={SIDE_FILLS.BLUE} />
+          </LegendItem>
+        ))}
       </LegendGroup>
       <LegendGroup title="Стан">
         <LegendItem label="пошкоджений, огляд ×0.5">
-          <rect x="2" y="1" width="14" height="7" fill={SIDE_FILLS.BLUE} stroke={INK} strokeWidth="1" />
-          <rect x="2" y="10" width="14" height="3" fill={MAP_COLORS.conditionDamaged} stroke={INK} strokeWidth="0.6" />
+          <FriendFrame height={9} />
+          <rect x="1" y="12" width="20" height="3" fill={MAP_COLORS.conditionDamaged} stroke={INK} strokeWidth="0.6" />
         </LegendItem>
         <LegendItem label="знищений">
-          <rect x="2" y="1" width="14" height="7" fill={MAP_COLORS.destroyedFill} stroke={INK} strokeWidth="1" />
-          <rect x="2" y="10" width="14" height="3" fill={MAP_COLORS.conditionDestroyed} stroke={INK} strokeWidth="0.6" />
+          <FriendFrame fill={MAP_COLORS.destroyedFill} height={9} />
+          <rect x="1" y="12" width="20" height="3" fill={MAP_COLORS.conditionDestroyed} stroke={INK} strokeWidth="0.6" />
         </LegendItem>
       </LegendGroup>
     </div>
@@ -110,8 +105,7 @@ export function BattlefieldPanel({ battlefield, trails, viewMode, onViewModeChan
   return (
     <Panel index={1} title="Обстановка" bodyClassName="p-0"
            aside={<ViewModeSwitch value={viewMode} onChange={onViewModeChange} />}>
-      <p className="border-b border-rule-soft px-3 py-1 text-xs text-ink-soft">{hint}</p>
-      <BattlefieldMap battlefield={battlefield} trails={trails} viewMode={viewMode} />
+      <BattlefieldMap battlefield={battlefield} trails={trails} viewMode={viewMode} hint={hint} />
       <Legend />
     </Panel>
   );
