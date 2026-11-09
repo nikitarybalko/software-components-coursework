@@ -76,6 +76,21 @@ cd backend && ./mvnw test
 | Unit | JUnit 5 + Mockito | Туман війни, `UnitState`, бар'єрна синхронізація тіків, життєвий цикл сесії |
 | Web slice | `@WebMvcTest` + MockMvc | контролери, валідація, API-ключі та ролі, коди помилок |
 | Інтеграційні | `@SpringBootTest` / `@DataJpaTest` + Testcontainers | повний цикл REST → ядро → PostgreSQL, snapshot'и, журнал подій, Reset, відновлення зі snapshot'а |
+| Конфігураційні | JUnit 5 + SnakeYAML | версії Java і Spring Boot, сервіси та ліміти пам'яті в docker-compose, налаштування PostgreSQL |
+
+### Трасування вимог
+
+Вимоги та тест-кейси описано в [docs/testing/requirements.yaml](docs/testing/requirements.yaml) і [docs/testing/test-cases.yaml](docs/testing/test-cases.yaml). Ідентифікатори вимог збігаються з Requirements Traceability Matrix курсової роботи. Автотести позначено тегами тест-кейсів, наприклад `@Tag(TC_FR3_01)`.
+
+Після кожного `./mvnw test` у `backend/target/traceability/` з'являються:
+
+| Файл | Призначення |
+| :--- | :--- |
+| `traceability-matrix.md` | матриця «вимога → тест-кейси → автотести → результат» |
+| `traceability-matrix.tsv` | та сама матриця у стовпчиках RTM, щоб вставити в таблицю |
+| `test-cases.md` | усі тест-кейси з кроками, очікуваним результатом і результатами автотестів |
+
+Тест `TraceabilityCatalogueTest` перевіряє, що кожна вимога має тест-кейс, кожен автоматизований тест-кейс виконується хоча б одним тестом, а теги не посилаються на неіснуючі тест-кейси.
 
 ### Дашборд Командира
 

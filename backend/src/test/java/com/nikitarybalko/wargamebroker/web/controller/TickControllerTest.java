@@ -21,6 +21,7 @@ import com.nikitarybalko.wargamebroker.web.security.ApiKeyAuthFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,18 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Collections;
 import java.util.List;
 
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_NFR3_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR11_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR1_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR1_05;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR2_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR2_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR2_03;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR2_04;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR3_03;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR3_04;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR6_05;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR7_01;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.CURRENT_TICK;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.EPOCH;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.ERROR;
@@ -62,6 +75,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -91,6 +105,7 @@ class TickControllerTest {
     private SimulatorRegistry simulatorRegistry;
 
 
+    @Tag(TC_FR7_01)
     @Test
     @DisplayName("Submit units fails with 401 when X-API-KEY header is missing")
     void submitUnitsWithoutApiKeyReturns401() throws Exception {
@@ -106,6 +121,7 @@ class TickControllerTest {
                 .andExpect(jsonPath(ERROR).value(HttpStatus.UNAUTHORIZED.getReasonPhrase()));
     }
 
+    @Tag(TC_FR7_01)
     @Test
     @DisplayName("Submit units fails with 401 when X-API-KEY is invalid")
     void submitUnitsWithInvalidApiKeyReturns401() throws Exception {
@@ -121,6 +137,7 @@ class TickControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Tag(TC_FR2_01)
     @Test
     @DisplayName("Submit units succeeds with 200 when Blue submits Blue units")
     void submitUnitsBlueSuccess() throws Exception {
@@ -143,6 +160,7 @@ class TickControllerTest {
         verify(tickManager).submitUnits(eq(Side.BLUE), eq(FIRST_TICK), any());
     }
 
+    @Tag(TC_FR2_03)
     @Test
     @DisplayName("Submit units fails with 403 when Blue attempts to submit Red units (anti-spoofing)")
     void submitUnitsBlueSpoofingRedFails() throws Exception {
@@ -158,6 +176,7 @@ class TickControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Tag(TC_FR2_02)
     @Test
     @DisplayName("Submit units fails with 400 when payload validation fails (negative view radius)")
     void submitUnitsValidationFailure() throws Exception {
@@ -175,6 +194,7 @@ class TickControllerTest {
                 .andExpect(jsonPath(ERROR).value(HttpStatus.BAD_REQUEST.getReasonPhrase()));
     }
 
+    @Tag(TC_FR3_03)
     @Test
     @DisplayName("Fog of War endpoint returns 200 with visible enemies for Blue")
     void getFogOfWarBlueSuccess() throws Exception {
@@ -190,6 +210,7 @@ class TickControllerTest {
                 .andExpect(jsonPath(FIRST_VISIBLE_ENEMY_ID).value(RED_UNIT));
     }
 
+    @Tag(TC_FR3_03)
     @Test
     @DisplayName("Fog of War endpoint returns 403 when Blue requests Red intelligence")
     void getFogOfWarBlueForbiddenForRed() throws Exception {
@@ -198,6 +219,7 @@ class TickControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Tag(TC_FR3_03)
     @Test
     @DisplayName("Admin API key can request Fog of War for either side")
     void getFogOfWarAdminAccess() throws Exception {
@@ -209,6 +231,7 @@ class TickControllerTest {
                 .andExpect(jsonPath(SIDE).value(Side.RED.name()));
     }
 
+    @Tag(TC_FR1_05)
     @Test
     @DisplayName("Current tick status endpoint returns 200")
     void getCurrentTickStatus() throws Exception {
@@ -223,6 +246,7 @@ class TickControllerTest {
                 .andExpect(jsonPath(STATUS).value(SimulationStatus.ACTIVE.name()));
     }
 
+    @Tag(TC_FR3_04)
     @Test
     @DisplayName("Fog of War endpoint returns 409 while tick is not complete")
     void getFogOfWarForIncompleteTickReturnsConflict() throws Exception {
@@ -233,6 +257,7 @@ class TickControllerTest {
                 .andExpect(status().isConflict());
     }
 
+    @Tag(TC_FR3_03)
     @Test
     @DisplayName("Admin Fog of War request without side parameter returns 400")
     void getFogOfWarAdminWithoutSideReturnsBadRequest() throws Exception {
@@ -241,6 +266,7 @@ class TickControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Tag(TC_FR1_02)
     @Test
     @DisplayName("Submit units returns 409 when simulator is not registered")
     void submitUnitsFromUnregisteredSimulatorReturnsConflict() throws Exception {
@@ -258,6 +284,7 @@ class TickControllerTest {
                 .andExpect(status().isConflict());
     }
 
+    @Tag(TC_FR6_05)
     @Test
     @DisplayName("Own units endpoint returns latest units of the authenticated force")
     void getOwnUnitsForAuthenticatedSide() throws Exception {
@@ -276,6 +303,7 @@ class TickControllerTest {
                 .andExpect(jsonPath(FIRST_UNIT_STATUS).value(UnitStatus.DAMAGED.name()));
     }
 
+    @Tag(TC_FR6_05)
     @Test
     @DisplayName("Own units endpoint returns 403 when Blue requests Red units")
     void getOwnUnitsForOpponentIsForbidden() throws Exception {
@@ -284,6 +312,7 @@ class TickControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Tag(TC_FR6_05)
     @Test
     @DisplayName("Own units endpoint requires side parameter for admin requests")
     void getOwnUnitsAdminWithoutSideReturnsBadRequest() throws Exception {
@@ -292,6 +321,7 @@ class TickControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @Tag(TC_FR11_01)
     @Test
     @DisplayName("Submitted unit type is passed to the tick manager, missing type becomes UNKNOWN")
     void submitUnitsPassesUnitTypeToDomain() throws Exception {
@@ -316,6 +346,7 @@ class TickControllerTest {
                 submitted.getValue().stream().map(UnitState::getType).toList());
     }
 
+    @Tag(TC_FR2_04)
     @Test
     @DisplayName("Submit units returns 400 for an unsupported unit type")
     void submitUnitsWithUnsupportedTypeReturnsBadRequest() throws Exception {
@@ -334,6 +365,42 @@ class TickControllerTest {
                 .andExpect(jsonPath(ERROR).value(HttpStatus.BAD_REQUEST.getReasonPhrase()));
 
         verify(tickManager, never()).submitUnits(any(), any(Long.class), any());
+    }
+
+    @Test
+    @Tag(TC_NFR3_01)
+    @DisplayName("Successful and error responses use the application/json content type")
+    void responsesUseJsonContentType() throws Exception {
+        when(tickManager.getStatus()).thenReturn(SimulationStatus.ACTIVE);
+        String validPayload = submitPayload(createUnitDto(BLUE_UNIT, Side.BLUE, 10.0, 20.0, 50.0, UnitStatus.HEALTHY));
+        String invalidPayload = submitPayload(createUnitDto(BLUE_UNIT, Side.BLUE, 10.0, 20.0, -5.0, UnitStatus.HEALTHY));
+
+        mockMvc.perform(post(TestEndpoints.SUBMIT)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.BLUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validPayload))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+
+        mockMvc.perform(post(TestEndpoints.SUBMIT)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validPayload))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+
+        mockMvc.perform(post(TestEndpoints.SUBMIT)
+                        .header(ApiKeyAuthFilter.API_KEY_HEADER, TestApiKeys.BLUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidPayload))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+    }
+
+    private String submitPayload(UnitDto unit) throws Exception {
+        return objectMapper.writeValueAsString(SubmitUnitsRequest.builder()
+                .tickNumber(FIRST_TICK)
+                .units(List.of(unit))
+                .build());
     }
 
     private UnitDto createUnitDto(String id, Side side, double x, double y, double radius, UnitStatus status) {

@@ -6,6 +6,7 @@ import com.nikitarybalko.wargamebroker.domain.model.UnitStatus;
 import com.nikitarybalko.wargamebroker.domain.service.FogOfWarService;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +14,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR3_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR3_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR9_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_NFR5_01;
 import static com.nikitarybalko.wargamebroker.support.TestUnitIds.BLUE_UNIT;
 import static com.nikitarybalko.wargamebroker.support.TestUnitIds.BLUE_UNIT_2;
 import static com.nikitarybalko.wargamebroker.support.TestUnitIds.RED_UNIT;
@@ -36,6 +41,7 @@ class EuclideanFogOfWarServiceTest {
         fogOfWarService = new EuclideanFogOfWarService();
     }
 
+    @Tag(TC_FR3_01)
     @Test
     @DisplayName("Unit spots enemy within view radius")
     void testVisibleWithinRadius() {
@@ -49,6 +55,7 @@ class EuclideanFogOfWarServiceTest {
         assertEquals(RED_UNIT, visible.get(0).getId());
     }
 
+    @Tag(TC_FR3_01)
     @Test
     @DisplayName("Unit does NOT spot enemy outside view radius")
     void testNotVisibleOutsideRadius() {
@@ -61,6 +68,7 @@ class EuclideanFogOfWarServiceTest {
         assertTrue(visible.isEmpty());
     }
 
+    @Tag(TC_FR3_01)
     @Test
     @DisplayName("Enemy on the exact boundary of view radius is detected")
     void testVisibleOnExactBoundary() {
@@ -70,6 +78,7 @@ class EuclideanFogOfWarServiceTest {
         assertTrue(fogOfWarService.isVisible(observer, target));
     }
 
+    @Tag(TC_FR9_01)
     @Test
     @DisplayName("Dynamic visibility: DAMAGED unit loses 50% of view radius")
     void testDynamicVisibilityForDamagedUnit() {
@@ -85,6 +94,7 @@ class EuclideanFogOfWarServiceTest {
         assertTrue(fogOfWarService.isVisible(damagedObserver, targetAt40));
     }
 
+    @Tag(TC_FR9_01)
     @Test
     @DisplayName("DESTROYED observer has no sight and detects nobody")
     void testDestroyedObserverHasNoSight() {
@@ -98,6 +108,7 @@ class EuclideanFogOfWarServiceTest {
         assertTrue(visible.isEmpty());
     }
 
+    @Tag(TC_FR3_02)
     @Test
     @DisplayName("Multiple allies detection and deduplication of spotted enemies")
     void testMultipleAlliesDetectionAndDeduplication() {
@@ -117,6 +128,7 @@ class EuclideanFogOfWarServiceTest {
         assertFalse(visible.stream().anyMatch(u -> u.getId().equals(RED_UNIT_3)));
     }
 
+    @Tag(TC_FR3_02)
     @Test
     @DisplayName("Edge cases: empty allies or enemies lists are handled safely")
     void testEmptyInputsHandledSafely() {
@@ -127,6 +139,7 @@ class EuclideanFogOfWarServiceTest {
         assertTrue(fogOfWarService.calculateVisibleEnemies(null, null).isEmpty());
     }
 
+    @Tag(TC_NFR5_01)
     @Test
     @DisplayName("Performance test: 500 allies vs 500 enemies executes within O(N*M)")
     void testPerformanceWith500Units() {

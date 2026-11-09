@@ -4,8 +4,13 @@ import com.nikitarybalko.wargamebroker.domain.model.Side;
 import com.nikitarybalko.wargamebroker.domain.model.UnitStatus;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR11_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR2_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR3_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR9_01;
 import static com.nikitarybalko.wargamebroker.support.TestUnitIds.BLUE_UNIT;
 import static com.nikitarybalko.wargamebroker.support.TestUnitIds.BLUE_UNIT_2;
 import static com.nikitarybalko.wargamebroker.support.TestUnitIds.RED_UNIT;
@@ -16,6 +21,7 @@ class UnitStateTest {
 
     private static final double TOLERANCE = 1e-9;
 
+    @Tag(TC_FR9_01)
     @Test
     @DisplayName("Effective view radius for HEALTHY unit equals base radius")
     void testEffectiveViewRadiusHealthy() {
@@ -24,6 +30,7 @@ class UnitStateTest {
         assertTrue(unit.isOperational());
     }
 
+    @Tag(TC_FR9_01)
     @Test
     @DisplayName("Effective view radius for DAMAGED unit is halved (50%)")
     void testEffectiveViewRadiusDamaged() {
@@ -32,6 +39,7 @@ class UnitStateTest {
         assertTrue(unit.isOperational());
     }
 
+    @Tag(TC_FR9_01)
     @Test
     @DisplayName("Effective view radius for DESTROYED unit is zero")
     void testEffectiveViewRadiusDestroyed() {
@@ -40,6 +48,7 @@ class UnitStateTest {
         assertFalse(unit.isOperational());
     }
 
+    @Tag(TC_FR3_01)
     @Test
     @DisplayName("Euclidean distance calculation between points (3, 4) and (0, 0)")
     void testDistanceToEuclidean() {
@@ -50,6 +59,7 @@ class UnitStateTest {
         assertEquals(5.0, u2.distanceTo(u1), TOLERANCE);
     }
 
+    @Tag(TC_FR3_01)
     @Test
     @DisplayName("Euclidean distance calculation with negative coordinates")
     void testDistanceToNegativeCoordinates() {
@@ -59,6 +69,7 @@ class UnitStateTest {
         assertEquals(50.0, u1.distanceTo(u2), TOLERANCE);
     }
 
+    @Tag(TC_FR9_01)
     @Test
     @DisplayName("Negative base view radius is safely clamped to 0.0")
     void testNegativeViewRadiusHandled() {
@@ -67,6 +78,7 @@ class UnitStateTest {
         assertEquals(0.0, unit.getEffectiveViewRadius(), TOLERANCE);
     }
 
+    @Tag(TC_FR11_01)
     @Test
     @DisplayName("Unit type defaults to UNKNOWN when it is not reported")
     void testUnitTypeDefaultsToUnknown() {
@@ -79,6 +91,7 @@ class UnitStateTest {
         assertEquals(UnitType.ARMOR, armor.getType());
     }
 
+    @Tag(TC_FR2_02)
     @Test
     @DisplayName("Constructor throws NullPointerException when required fields are missing")
     void testNullValidationInConstructor() {

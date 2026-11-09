@@ -15,6 +15,7 @@ import com.nikitarybalko.wargamebroker.web.security.ApiKeyAuthFilter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.UUID;
 
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR11_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR1_03;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR6_04;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR8_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_NFR2_01;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.ARRAY_LENGTH;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.BLUE_UNITS_LENGTH;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.FIRST_BLUE_UNIT_TYPE;
@@ -64,6 +70,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@Tag(TC_NFR2_01)
 @SpringBootTest
 @AutoConfigureMockMvc
 @DisplayName("Integration tests: End-to-end simulation flow on PostgreSQL")
@@ -99,6 +106,8 @@ class SimulationFullFlowIntegrationTest extends AbstractPostgresIntegrationTest 
         }
     }
 
+    @Tag(TC_FR1_03)
+    @Tag(TC_FR11_01)
     @Test
     @DisplayName("Complete simulation step with barrier synchronization and Fog of War visibility")
     void testFullSimulationStep() throws Exception {
@@ -195,6 +204,7 @@ class SimulationFullFlowIntegrationTest extends AbstractPostgresIntegrationTest 
                 .andExpect(jsonPath(ARRAY_LENGTH).value(greaterThanOrEqualTo(1)));
     }
 
+    @Tag(TC_FR8_02)
     @Test
     @DisplayName("Reset clears persisted snapshots and event history")
     void testResetClearsPersistedHistory() throws Exception {
@@ -216,6 +226,7 @@ class SimulationFullFlowIntegrationTest extends AbstractPostgresIntegrationTest 
                 .andExpect(jsonPath(FIRST_ITEM_TYPE).value(EventType.SIMULATION_RESET.name()));
     }
 
+    @Tag(TC_FR6_04)
     @Test
     @DisplayName("Snapshot persisted in PostgreSQL restores battlefield and tick counter")
     void testRestoreFromPersistedSnapshot() throws Exception {

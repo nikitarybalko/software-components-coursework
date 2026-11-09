@@ -15,6 +15,7 @@ import com.nikitarybalko.wargamebroker.support.TestProfiles;
 import com.nikitarybalko.wargamebroker.web.security.ApiKeyAuthFilter;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -26,6 +27,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR3_03;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR4_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR5_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR9_02;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.ARRAY_LENGTH;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.BLUE_UNITS_LENGTH;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.BLUE_VISIBLE_RED_LENGTH;
@@ -63,6 +68,7 @@ class StateControllerTest {
     private StateCheckpointingService checkpointingService;
 
 
+    @Tag(TC_FR9_02)
     @Test
     @DisplayName("Get full battlefield state returns units for both factions")
     void testGetFullState() throws Exception {
@@ -89,6 +95,7 @@ class StateControllerTest {
                 .andExpect(jsonPath(RED_VISIBLE_BLUE_LENGTH).value(1));
     }
 
+    @Tag(TC_FR4_02)
     @Test
     @DisplayName("Get snapshots returns list of persisted snapshots")
     void testGetSnapshots() throws Exception {
@@ -102,6 +109,7 @@ class StateControllerTest {
                 .andExpect(jsonPath(FIRST_ITEM_TICK_NUMBER).value(SNAPSHOT_TICK));
     }
 
+    @Tag(TC_FR5_02)
     @Test
     @DisplayName("Get events returns list of system event logs")
     void testGetEvents() throws Exception {
@@ -116,6 +124,7 @@ class StateControllerTest {
                 .andExpect(jsonPath(FIRST_ITEM_SIDE).value(Side.RED.name()));
     }
 
+    @Tag(TC_FR3_03)
     @Test
     @DisplayName("State endpoints return 403 for force API keys to keep Fog of War intact")
     void testStateEndpointsForbiddenForForceKeys() throws Exception {

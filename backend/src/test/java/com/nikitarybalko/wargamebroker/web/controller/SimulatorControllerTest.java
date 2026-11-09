@@ -12,6 +12,7 @@ import com.nikitarybalko.wargamebroker.web.mapper.SimulationStatusMapper;
 import com.nikitarybalko.wargamebroker.web.security.ApiKeyAuthFilter;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -20,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR1_01;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -46,6 +48,7 @@ class SimulatorControllerTest {
     @MockitoBean
     private StateCheckpointingService checkpointingService;
 
+    @Tag(TC_FR1_01)
     @Test
     @DisplayName("Blue force key registers the Blue simulator")
     void registerBlueSimulator() throws Exception {
@@ -56,6 +59,7 @@ class SimulatorControllerTest {
         verify(sessionService).registerSimulator(Side.BLUE);
     }
 
+    @Tag(TC_FR1_01)
     @Test
     @DisplayName("Red force key registers the Red simulator")
     void registerRedSimulator() throws Exception {
@@ -66,6 +70,7 @@ class SimulatorControllerTest {
         verify(sessionService).registerSimulator(Side.RED);
     }
 
+    @Tag(TC_FR1_01)
     @Test
     @DisplayName("Admin key cannot register a simulator")
     void registerWithAdminKeyIsForbidden() throws Exception {

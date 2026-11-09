@@ -1,0 +1,512 @@
+# Каталог тест-кейсів Wargame Broker.
+# automation: automated — тест-кейс виконують автотести з тегом @Tag(<id>); manual — виконується вручну.
+# level: unit | web | integration | configuration | ui | deployment.
+
+- id: TC-FR1-01
+  title: Реєстрація симулятора за ключем сторони
+  requirements: [FR-1]
+  level: web
+  automation: automated
+  preconditions: Брокер запущено, відомі API-ключі Blue, Red та адміністратора
+  steps:
+    - Надіслати POST /api/v1/simulators/register з ключем Blue
+    - Надіслати той самий запит з ключем Red
+    - Надіслати запит з ключем адміністратора
+    - Повторно зареєструвати Blue
+  expected: >-
+    Blue та Red зареєстровано (200), сторона береться з ключа; адміністратор отримує 403;
+    повторна реєстрація не створює другої події SIMULATOR_REGISTERED
+
+- id: TC-FR1-02
+  title: Хід від незареєстрованої сторони відхиляється
+  requirements: [FR-1]
+  level: web
+  automation: automated
+  preconditions: Сесію ініціалізовано, сторона Red не зареєстрована
+  steps:
+    - Надіслати POST /api/v1/simulation/ticks/submit з ключем Red і юнітами Red
+  expected: Відповідь 409 з повідомленням про незареєстрований симулятор; хід не записано
+
+- id: TC-FR1-03
+  title: Тік завершується лише після ходів обох сторін
+  requirements: [FR-1]
+  level: integration
+  automation: automated
+  preconditions: Сесія активна, обидві сторони зареєстровані, поточний тік 1
+  steps:
+    - Blue надсилає хід за тік 1
+    - Перевірити статус тіку
+    - Red надсилає хід за тік 1
+    - Перевірити поточний тік
+  expected: >-
+    Після ходу Blue тік не завершено і номер тіку не змінився; після ходу Red тік 1 завершено,
+    розраховано видимість, поточний тік став 2
+
+- id: TC-FR1-04
+  title: Хід з неправильним номером тіку або поза активною сесією відхиляється
+  requirements: [FR-1]
+  level: unit
+  automation: automated
+  preconditions: Поточний тік 1
+  steps:
+    - Надіслати хід, коли сесія не активна
+    - Активувати сесію і надіслати хід за тік 99
+  expected: Перший хід відхилено як неактивна сесія, другий — як неправильний тік; стан не змінився
+
+- id: TC-FR1-05
+  title: Статус сесії та тіку доступний усім автентифікованим клієнтам
+  requirements: [FR-1]
+  level: web
+  automation: automated
+  preconditions: Брокер запущено
+  steps:
+    - Запитати GET /api/v1/simulation/status з ключем адміністратора
+    - Запитати той самий ресурс з ключем Blue
+    - Запитати GET /api/v1/simulation/ticks/current
+  expected: Усі запити повертають 200 з номером тіку, статусом сесії, зареєстрованими сторонами та сторонами, що вже походили
+
+- id: TC-FR2-01
+  title: Коректний пакет стану юнітів приймається
+  requirements: [FR-2]
+  level: web
+  automation: automated
+  preconditions: Сесія активна, Blue зареєстровано
+  steps:
+    - Надіслати хід Blue з повністю заповненими полями юніта
+  expected: Відповідь 200 з номером тіку та ознакою завершення тіку; юніти передано в Tick Manager
+
+- id: TC-FR2-02
+  title: Пакет з некоректними полями відхиляється валідацією
+  requirements: [FR-2, FR-5]
+  level: web
+  automation: automated
+  preconditions: Сесія активна
+  steps:
+    - Надіслати хід з від'ємним радіусом огляду юніта
+  expected: Відповідь 400 з переліком помилок полів; у журнал записано подію VALIDATION_ERROR; хід не прийнято
+
+- id: TC-FR2-03
+  title: Юніт чужої сторони у пакеті відхиляється
+  requirements: [FR-2, FR-7]
+  level: web
+  automation: automated
+  preconditions: Сесія активна
+  steps:
+    - Надіслати з ключем Blue пакет з юнітом Red
+  expected: Відповідь 403; на рівні ядра пакет зі змішаними сторонами також відхиляється
+
+- id: TC-FR2-04
+  title: Незчитуваний JSON або невідоме значення переліку повертає 400
+  requirements: [FR-2, FR-11]
+  level: web
+  automation: automated
+  preconditions: Сесія активна
+  steps:
+    - Надіслати хід, у якому unitType має значення SPACESHIP
+  expected: Відповідь 400 (а не 500) з описом помилки; Tick Manager не викликано
+
+- id: TC-FR2-05
+  title: Надто довге повідомлення про помилку зберігається без збою
+  requirements: [FR-2, FR-5]
+  level: integration
+  automation: automated
+  preconditions: PostgreSQL доступна
+  steps:
+    - Записати в журнал подію з повідомленням удвічі довшим за ліміт колонки
+  expected: Подію збережено, повідомлення обрізано до ліміту з позначкою обрізання
+
+- id: TC-FR3-01
+  title: Ворог у радіусі огляду видимий, поза ним — ні
+  requirements: [FR-3]
+  level: unit
+  automation: automated
+  preconditions: Немає
+  steps:
+    - Розмістити ворога всередині радіусу огляду, поза ним і точно на межі
+    - Розрахувати видимість
+  expected: Ворог усередині та на межі видимий, поза радіусом — ні; відстань рахується за Евклідовою метрикою
+
+- id: TC-FR3-02
+  title: Розвідка сторони об'єднує спостерігачів без дублікатів
+  requirements: [FR-3]
+  level: unit
+  automation: automated
+  preconditions: Немає
+  steps:
+    - Двоє союзників бачать спільну ціль, ще одна ціль далеко
+    - Розрахувати видимість, також для порожніх списків
+  expected: Кожна видима ціль присутня один раз, далека відсутня; порожні або відсутні списки дають порожній результат
+
+- id: TC-FR3-03
+  title: Сторона отримує лише свою розвідку
+  requirements: [FR-3, FR-7]
+  level: web
+  automation: automated
+  preconditions: Тік 1 завершено
+  steps:
+    - Blue запитує туман війни за тік 1
+    - Blue запитує туман війни Red
+    - Адміністратор запитує туман війни з параметром side і без нього
+    - Blue запитує повну картину поля бою
+  expected: >-
+    Blue отримує своїх видимих ворогів; запит чужої розвідки та повної картини — 403;
+    адміністратор отримує розвідку обраної сторони, без side — 400
+
+- id: TC-FR3-04
+  title: Розвідка недоступна до завершення тіку
+  requirements: [FR-3, FR-1]
+  level: web
+  automation: automated
+  preconditions: Сесія активна, походила лише Blue
+  steps:
+    - Запитати туман війни за поточний тік
+    - Запитати туман війни за тік, дані якого видалено
+  expected: Для незавершеного тіку — 409, для видаленого — 404
+
+- id: TC-FR4-01
+  title: Snapshot створюється кожні N тіків
+  requirements: [FR-4]
+  level: unit
+  automation: automated
+  preconditions: Інтервал snapshot'ів N = 2
+  steps:
+    - Завершити тік 1
+    - Завершити тік 2
+  expected: Після тіку 1 snapshot не створено, після тіку 2 створено рівно один
+
+- id: TC-FR4-02
+  title: Snapshot зберігається в БД з усіма юнітами
+  requirements: [FR-4, NFR-2]
+  level: integration
+  automation: automated
+  preconditions: PostgreSQL доступна
+  steps:
+    - Зберегти snapshot з двома юнітами
+    - Завантажити його за ідентифікатором і переглянути список snapshot'ів
+  expected: Snapshot містить обидва юніти з координатами та станом; записано подію SNAPSHOT_SAVED; список повертається через API
+
+- id: TC-FR5-01
+  title: Пошкодження та знищення юніта фіксуються один раз
+  requirements: [FR-5]
+  level: unit
+  automation: automated
+  preconditions: Сесія активна
+  steps:
+    - Юніт Red стає пошкодженим у тіку 1
+    - Юніт Red стає знищеним у тіку 2 і лишається знищеним у тіку 3
+  expected: Записано рівно одну подію UNIT_DAMAGED та одну UNIT_DESTROYED; для Blue подій немає
+
+- id: TC-FR5-02
+  title: Журнал подій зберігається та видається у зворотному хронологічному порядку
+  requirements: [FR-5, NFR-2]
+  level: integration
+  automation: automated
+  preconditions: PostgreSQL доступна
+  steps:
+    - Записати подію ініціалізації, потім подію знищення
+    - Запитати журнал
+  expected: Журнал містить обидві події, новіша перша; ендпоінт журналу повертає тип і сторону події
+
+- id: TC-FR6-01
+  title: Тайм-аут однієї сторони ставить симуляцію на паузу
+  requirements: [FR-6]
+  level: unit
+  automation: automated
+  preconditions: Сесія активна, тайм-аут 1000 мс
+  steps:
+    - Blue надсилає хід
+    - Минає більше 1000 мс без ходу Red
+    - Виконується перевірка тайм-аутів
+  expected: Статус PAUSED; записано TIMEOUT_DISCONNECT для Red та SIMULATION_PAUSED
+
+- id: TC-FR6-02
+  title: Тайм-аут спрацьовує, коли мовчать обидві сторони, і не спрацьовує раніше
+  requirements: [FR-6]
+  level: unit
+  automation: automated
+  preconditions: Сесія активна, тайм-аут 1000 мс
+  steps:
+    - Перевірити тайм-аути одразу після активації
+    - Перевірити тайм-аути, коли минуло більше 1000 мс без ходів
+  expected: Перша перевірка нічого не змінює; друга ставить паузу і фіксує TIMEOUT_DISCONNECT для обох сторін
+
+- id: TC-FR6-03
+  title: Пауза та продовження дозволені лише з відповідних станів
+  requirements: [FR-6]
+  level: web
+  automation: automated
+  preconditions: Ключ адміністратора
+  steps:
+    - Поставити активну сесію на паузу з причиною
+    - Продовжити сесію
+    - Спробувати поставити на паузу неактивну сесію і продовжити активну
+  expected: Коректні переходи виконуються і фіксуються в журналі; некоректні повертають 409
+
+- id: TC-FR6-04
+  title: Відновлення стану зі snapshot
+  requirements: [FR-6, FR-4]
+  level: integration
+  automation: automated
+  preconditions: Збережено snapshot'и за тіки 2 і 4, юніти рухались далі
+  steps:
+    - Відновити snapshot тіку 4
+    - Переглянути повну картину поля бою
+    - Продовжити сесію і зіграти тік 5
+    - Спробувати відновити неіснуючий snapshot
+  expected: >-
+    Сесія на паузі з тіком 5, позиції юнітів як у snapshot; після продовження тік 5 завершується;
+    неіснуючий snapshot — 404
+
+- id: TC-FR6-05
+  title: Симулятор отримує свої юніти після зміни епохи стану
+  requirements: [FR-6, FR-7]
+  level: web
+  automation: automated
+  preconditions: Відбулося відновлення або скидання
+  steps:
+    - Перевірити, що епоха зросла після reset і restore
+    - Blue запитує GET /api/v1/simulation/ticks/current/units
+    - Blue запитує юніти Red; адміністратор запитує без side
+  expected: Епоха зростає на 1 після кожної операції; Blue отримує свої юніти з епохою; чужі юніти — 403; без side — 400
+
+- id: TC-FR7-01
+  title: Запит без API-ключа або з невідомим ключем відхиляється
+  requirements: [FR-7]
+  level: web
+  automation: automated
+  preconditions: Немає
+  steps:
+    - Надіслати хід без заголовка X-API-KEY
+    - Надіслати хід з невідомим ключем
+  expected: Обидва запити — 401 з JSON-описом помилки
+
+- id: TC-FR7-02
+  title: Керування сесією доступне лише адміністратору
+  requirements: [FR-7, FR-8]
+  level: web
+  automation: automated
+  preconditions: Ключі Blue та адміністратора
+  steps:
+    - Викликати init, reset, pause, resume, restore з ключем Blue
+    - Перевірити рішення перехоплювача ролей для дозволеної та недозволеної ролі
+  expected: Усі команди з ключем Blue — 403, сесія не змінюється; дозволена роль проходить перевірку
+
+- id: TC-FR7-03
+  title: Кожен ендпоінт явно оголошує правило доступу
+  requirements: [FR-7]
+  level: unit
+  automation: automated
+  preconditions: Немає
+  steps:
+    - Просканувати всі REST-контролери
+    - Перевірити анотації доступу на кожному ендпоінті
+    - Викликати ендпоінт без оголошеного правила
+  expected: Кожен ендпоінт має рівно одне непорожнє правило; ендпоінт без правила недоступний нікому
+
+- id: TC-FR8-01
+  title: Ініціалізація скидає стан і активує сесію
+  requirements: [FR-8]
+  level: web
+  automation: automated
+  preconditions: Ключ адміністратора
+  steps:
+    - Викликати POST /api/v1/simulation/init
+  expected: Відповідь 200, статус ACTIVE, тік 1; записано подію SIMULATION_INITIALIZED
+
+- id: TC-FR8-02
+  title: Скидання очищує пам'ять і базу даних
+  requirements: [FR-8, NFR-2]
+  level: integration
+  automation: automated
+  preconditions: У БД є snapshot'и та події
+  steps:
+    - Викликати POST /api/v1/simulation/reset
+    - Переглянути snapshot'и та журнал
+  expected: Статус INITIALIZING, тік 1; snapshot'ів немає, у журналі лише подія SIMULATION_RESET
+
+- id: TC-FR9-01
+  title: Радіус огляду залежить від стану юніта
+  requirements: [FR-9]
+  level: unit
+  automation: automated
+  preconditions: Немає
+  steps:
+    - Обчислити ефективний радіус для боєздатного, пошкодженого та знищеного юніта
+    - Перевірити видимість цілі пошкодженим і знищеним спостерігачем
+  expected: Пошкоджений бачить на 50% ближче, знищений не бачить; від'ємний радіус обмежується нулем
+
+- id: TC-FR9-02
+  title: Ефективний радіус огляду передається клієнтам
+  requirements: [FR-9]
+  level: web
+  automation: automated
+  preconditions: Відомий пошкоджений юніт з радіусом 50
+  steps:
+    - Запитати повну картину поля бою
+  expected: Відповідь містить viewRadius 50 та effectiveViewRadius 25
+
+- id: TC-FR10-01
+  title: Дашборд відображає обстановку та зони огляду
+  requirements: [FR-10]
+  level: ui
+  automation: manual
+  preconditions: Стек запущено, симулятори ведуть бій
+  steps:
+    - Відкрити http://localhost:3000
+    - Дочекатися кількох тіків
+  expected: Шапка показує тік, стан сесії та симуляторів; на карті юніти обох сторін із зонами огляду та слідами руху
+
+- id: TC-FR10-02
+  title: Режими «Очима Blue» та «Очима Red» приховують невидимих ворогів
+  requirements: [FR-10, FR-3]
+  level: ui
+  automation: manual
+  preconditions: Йде бій, частина ворогів поза оглядом
+  steps:
+    - Перемкнути режим «Очима Blue»
+    - Перемкнути режим «Очима Red»
+  expected: Видно лише свої юніти та ворогів, яких бачить сторона; решта поля заштрихована; сліди противника не показуються
+
+- id: TC-FR10-03
+  title: Керування сесією з дашборда
+  requirements: [FR-10, FR-8, FR-6]
+  level: ui
+  automation: manual
+  preconditions: Стек запущено
+  steps:
+    - Натиснути «Ініціалізувати»
+    - Натиснути «Пауза» з причиною, потім «Продовжити»
+    - Двічі натиснути «Скинути»
+  expected: Статус сесії змінюється відповідно; неможливі дії недоступні; скидання вимагає підтвердження і очищує контрольні точки
+
+- id: TC-FR10-04
+  title: Відновлення контрольної точки з дашборда
+  requirements: [FR-10, FR-6]
+  level: ui
+  automation: manual
+  preconditions: Є кілька контрольних точок
+  steps:
+    - Натиснути «Відновити» біля контрольної точки
+    - Підтвердити повторним натисканням
+    - Натиснути «Продовжити»
+  expected: Кнопка підтвердження показує номер тіку; сесія переходить на паузу з тіком після точки; бій продовжується з відновлених позицій
+
+- id: TC-FR11-01
+  title: Тип бойової одиниці приймається, за замовчуванням UNKNOWN
+  requirements: [FR-11]
+  level: web
+  automation: automated
+  preconditions: Сесія активна
+  steps:
+    - Надіслати хід з одним юнітом типу ARMOR і одним без типу
+    - Переглянути повну картину поля бою
+  expected: Tick Manager отримує типи ARMOR та UNKNOWN; повна картина повертає тип кожного юніта
+
+- id: TC-FR11-02
+  title: Тип бойової одиниці зберігається у snapshot
+  requirements: [FR-11, FR-4]
+  level: integration
+  automation: automated
+  preconditions: PostgreSQL доступна
+  steps:
+    - Зберегти snapshot з юнітом RECON і юнітом без типу
+    - Завантажити snapshot
+  expected: Юніт RECON зберіг тип, юніт без типу має UNKNOWN
+
+- id: TC-NFR1-01
+  title: Бекенд працює на Java 21 та Spring Boot 3.4
+  requirements: [NFR-1]
+  level: configuration
+  automation: automated
+  preconditions: Немає
+  steps:
+    - Перевірити версію середовища виконання Java
+    - Перевірити версію Spring Boot
+  expected: Java 21, Spring Boot 3.4.x
+
+- id: TC-NFR2-01
+  title: Інтеграційні тести працюють на PostgreSQL
+  requirements: [NFR-2]
+  level: integration
+  automation: automated
+  preconditions: Docker доступний для Testcontainers
+  steps:
+    - Запустити інтеграційні тести збереження та повного циклу симуляції
+    - Перевірити налаштування джерела даних застосунку
+  expected: Тести проходять на контейнері PostgreSQL 16; застосунок налаштовано на драйвер PostgreSQL
+
+- id: TC-NFR3-01
+  title: Відповіді API, зокрема помилки, мають тип application/json
+  requirements: [NFR-3]
+  level: web
+  automation: automated
+  preconditions: Немає
+  steps:
+    - Надіслати коректний хід
+    - Надіслати хід без ключа
+    - Надіслати некоректний хід
+  expected: Усі відповіді мають Content-Type application/json
+
+- id: TC-NFR4-01
+  title: Розгортання всієї системи однією командою
+  requirements: [NFR-4]
+  level: deployment
+  automation: manual
+  preconditions: Встановлено Docker та Docker Compose, вільні порти 8080 і 3000
+  steps:
+    - Виконати docker compose up -d --build у корені репозиторію
+    - Виконати docker compose ps
+    - Відкрити Swagger UI та дашборд
+  expected: Сервіси postgres, backend і dashboard запущено, postgres і backend мають стан healthy; Swagger UI та дашборд відкриваються
+
+- id: TC-NFR4-02
+  title: Конфігурація docker-compose описує всі сервіси та порядок запуску
+  requirements: [NFR-4]
+  level: configuration
+  automation: automated
+  preconditions: Немає
+  steps:
+    - Прочитати docker-compose.yml
+  expected: Описано postgres, backend, dashboard та simulators; backend запускається після готовності postgres
+
+- id: TC-NFR5-01
+  title: Розрахунок видимості для 500 × 500 юнітів укладається в обмеження часу
+  requirements: [NFR-5, FR-3]
+  level: unit
+  automation: automated
+  preconditions: Немає
+  steps:
+    - Розрахувати видимість для 500 союзників та 500 ворогів
+  expected: Результат непорожній, розрахунок триває менше 200 мс
+
+- id: TC-NFR6-01
+  title: Контейнер мікросервісу має ліміт пам'яті, а JVM його враховує
+  requirements: [NFR-6]
+  level: configuration
+  automation: automated
+  preconditions: Немає
+  steps:
+    - Прочитати docker-compose.yml та Dockerfile бекенду
+  expected: Для backend задано deploy.resources.limits.memory; JVM запускається з MaxRAMPercentage
+
+- id: TC-NFR6-02
+  title: Під час тривалої симуляції пам'ять контейнера не перевищує ліміт
+  requirements: [NFR-6]
+  level: deployment
+  automation: manual
+  preconditions: Стек запущено
+  steps:
+    - Запустити симулятори на 150 тіків
+    - Під час бою кілька разів виконати docker stats --no-stream
+  expected: Пам'ять контейнера backend стабільно нижча за ліміт 512 MiB, контейнер не перезапускається
+
+- id: TC-NFR7-01
+  title: Специфікація OpenAPI описує всі ендпоінти й доступна без ключа
+  requirements: [NFR-7]
+  level: integration
+  automation: automated
+  preconditions: Застосунок запущено
+  steps:
+    - Запитати /v3/api-docs без API-ключа
+    - Відкрити Swagger UI
+  expected: Специфікація містить усі ендпоінти та схему безпеки X-API-KEY; Swagger UI відкривається

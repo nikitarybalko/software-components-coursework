@@ -1,15 +1,18 @@
 package com.nikitarybalko.wargamebroker.web.security;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 import java.util.EnumSet;
 import java.util.Optional;
 
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR7_03;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@Tag(TC_FR7_03)
 @DisplayName("Unit tests: EndpointAccessRules resolution")
 class EndpointAccessRulesTest {
 

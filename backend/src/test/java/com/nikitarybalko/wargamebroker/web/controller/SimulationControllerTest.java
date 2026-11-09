@@ -16,6 +16,7 @@ import com.nikitarybalko.wargamebroker.web.security.ApiKeyAuthFilter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -28,6 +29,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.UUID;
 
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR1_05;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR6_03;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR6_04;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR7_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR8_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR8_02;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.CURRENT_TICK;
 import static com.nikitarybalko.wargamebroker.support.TestJsonPaths.STATUS;
 import static com.nikitarybalko.wargamebroker.support.TestSimulationSettings.FIRST_TICK;
@@ -70,6 +77,7 @@ class SimulationControllerTest {
     private StateCheckpointingService checkpointingService;
 
 
+    @Tag(TC_FR8_01)
     @Test
     @DisplayName("Init simulation endpoint initializes session and returns 200")
     void testInitSimulation() throws Exception {
@@ -85,6 +93,7 @@ class SimulationControllerTest {
         verify(sessionService).initSimulation();
     }
 
+    @Tag(TC_FR8_02)
     @Test
     @DisplayName("Reset simulation endpoint resets session and returns 200")
     void testResetSimulation() throws Exception {
@@ -99,6 +108,7 @@ class SimulationControllerTest {
         verify(sessionService).resetSimulation();
     }
 
+    @Tag(TC_FR6_03)
     @Test
     @DisplayName("Pause simulation endpoint pauses session with reason")
     void testPauseSimulation() throws Exception {
@@ -115,6 +125,7 @@ class SimulationControllerTest {
         verify(sessionService).pauseSimulation(PAUSE_REASON);
     }
 
+    @Tag(TC_FR6_03)
     @Test
     @DisplayName("Resume simulation endpoint resumes session")
     void testResumeSimulation() throws Exception {
@@ -128,6 +139,7 @@ class SimulationControllerTest {
         verify(sessionService).resumeSimulation();
     }
 
+    @Tag(TC_FR6_04)
     @Test
     @DisplayName("Restore simulation from snapshot restores state and returns 200")
     void testRestoreFromSnapshot() throws Exception {
@@ -144,6 +156,7 @@ class SimulationControllerTest {
         verify(sessionService).restoreFromSnapshot(snapshotId);
     }
 
+    @Tag(TC_FR1_05)
     @Test
     @DisplayName("Status endpoint returns current simulation status")
     void testGetStatus() throws Exception {
@@ -157,6 +170,7 @@ class SimulationControllerTest {
                 .andExpect(jsonPath(CURRENT_TICK).value(ONGOING_TICK));
     }
 
+    @Tag(TC_FR7_02)
     @Test
     @DisplayName("Lifecycle endpoints return 403 for force API keys")
     void testLifecycleEndpointsForbiddenForForceKeys() throws Exception {
@@ -169,6 +183,7 @@ class SimulationControllerTest {
         verifyNoInteractions(sessionService);
     }
 
+    @Tag(TC_FR1_05)
     @Test
     @DisplayName("Status endpoint is available to force API keys")
     void testStatusAvailableForForceKeys() throws Exception {
@@ -180,6 +195,7 @@ class SimulationControllerTest {
                 .andExpect(jsonPath(STATUS).value(SimulationStatus.ACTIVE.name()));
     }
 
+    @Tag(TC_FR6_03)
     @Test
     @DisplayName("Resume returns 409 when lifecycle transition is invalid")
     void testResumeInvalidTransitionReturnsConflict() throws Exception {
@@ -191,6 +207,7 @@ class SimulationControllerTest {
                 .andExpect(status().isConflict());
     }
 
+    @Tag(TC_FR6_04)
     @Test
     @DisplayName("Restore returns 404 when snapshot does not exist")
     void testRestoreMissingSnapshotReturnsNotFound() throws Exception {

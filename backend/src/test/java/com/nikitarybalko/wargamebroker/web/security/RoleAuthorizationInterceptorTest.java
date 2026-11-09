@@ -1,11 +1,15 @@
 package com.nikitarybalko.wargamebroker.web.security;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.method.HandlerMethod;
 
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR7_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR7_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR7_03;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -32,12 +36,14 @@ class RoleAuthorizationInterceptorTest {
         }
     }
 
+    @Tag(TC_FR7_02)
     @Test
     @DisplayName("Allowed role passes the role check")
     void allowedRolePasses() throws Exception {
         assertThat(preHandle(ADMIN_ONLY_METHOD, ClientRole.ROLE_ADMIN)).isTrue();
     }
 
+    @Tag(TC_FR7_02)
     @Test
     @DisplayName("Role outside @RequiresRole is rejected with ForbiddenException")
     void disallowedRoleIsRejected() {
@@ -45,6 +51,7 @@ class RoleAuthorizationInterceptorTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    @Tag(TC_FR7_02)
     @Test
     @DisplayName("@AnyAuthenticatedRole endpoint accepts every authenticated role")
     void openEndpointAcceptsEveryRole() throws Exception {
@@ -53,6 +60,7 @@ class RoleAuthorizationInterceptorTest {
         }
     }
 
+    @Tag(TC_FR7_03)
     @Test
     @DisplayName("Endpoint without a declared rule is denied")
     void undeclaredEndpointIsDenied() {
@@ -60,6 +68,7 @@ class RoleAuthorizationInterceptorTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    @Tag(TC_FR7_01)
     @Test
     @DisplayName("Unauthenticated request to a protected endpoint is rejected with UnauthorizedException")
     void unauthenticatedRequestIsRejected() {

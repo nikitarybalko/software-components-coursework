@@ -13,6 +13,7 @@ import com.nikitarybalko.wargamebroker.infrastructure.persistence.repository.Sna
 import com.nikitarybalko.wargamebroker.support.AbstractPostgresIntegrationTest;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,11 +23,18 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import java.util.List;
 import java.util.Optional;
 
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR11_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR2_05;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR4_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR5_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR8_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_NFR2_01;
 import static com.nikitarybalko.wargamebroker.support.TestSimulationSettings.FIRST_TICK;
 import static com.nikitarybalko.wargamebroker.support.TestUnitIds.BLUE_UNIT;
 import static com.nikitarybalko.wargamebroker.support.TestUnitIds.RED_UNIT;
 import static org.junit.jupiter.api.Assertions.*;
 
+@Tag(TC_NFR2_01)
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @DisplayName("Integration tests: Persistence & Checkpointing on PostgreSQL (JpaStateCheckpointingService)")
@@ -49,6 +57,7 @@ class JpaStateCheckpointingServiceTest extends AbstractPostgresIntegrationTest {
         checkpointingService.clearAll();
     }
 
+    @Tag(TC_FR4_02)
     @Test
     @DisplayName("checkAndSaveSnapshot persists all units and records SNAPSHOT_SAVED event")
     void testCheckAndSaveSnapshotPersistsUnits() {
@@ -73,6 +82,7 @@ class JpaStateCheckpointingServiceTest extends AbstractPostgresIntegrationTest {
         assertEquals(EventType.SNAPSHOT_SAVED, events.get(0).getType());
     }
 
+    @Tag(TC_FR5_02)
     @Test
     @DisplayName("recordEvent saves events and retrieves them in reverse chronological order")
     void testRecordEventAndOrdering() {
@@ -85,6 +95,7 @@ class JpaStateCheckpointingServiceTest extends AbstractPostgresIntegrationTest {
         assertEquals(EventType.SIMULATION_INITIALIZED, events.get(1).getType());
     }
 
+    @Tag(TC_FR8_02)
     @Test
     @DisplayName("clearAll deletes all snapshots and event logs from database")
     void testClearAllDeletesData() {
@@ -100,6 +111,7 @@ class JpaStateCheckpointingServiceTest extends AbstractPostgresIntegrationTest {
         assertTrue(checkpointingService.getRecentSnapshots().isEmpty());
     }
 
+    @Tag(TC_FR11_02)
     @Test
     @DisplayName("Snapshot keeps unit types after being reloaded from the database")
     void testSnapshotPersistsUnitTypes() {
@@ -114,6 +126,7 @@ class JpaStateCheckpointingServiceTest extends AbstractPostgresIntegrationTest {
         assertEquals(UnitType.UNKNOWN, findUnit(reloaded, RED_UNIT).getType());
     }
 
+    @Tag(TC_FR2_05)
     @Test
     @DisplayName("recordEvent truncates messages longer than the column limit instead of failing")
     void testRecordEventTruncatesLongMessage() {

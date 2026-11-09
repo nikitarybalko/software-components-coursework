@@ -14,6 +14,7 @@ import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
 import com.nikitarybalko.wargamebroker.domain.service.TickManager;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR1_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR6_03;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR6_04;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR8_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR8_02;
 import static com.nikitarybalko.wargamebroker.support.TestUnitIds.BLUE_UNIT;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -53,6 +59,7 @@ class SimulationSessionServiceTest {
         sessionService = new SimulationSessionServiceImpl(tickManager, checkpointingService, simulatorRegistry);
     }
 
+    @Tag(TC_FR8_01)
     @Test
     @DisplayName("initSimulation resets tick manager and activates simulation")
     void testInitSimulation() {
@@ -63,6 +70,7 @@ class SimulationSessionServiceTest {
         verify(checkpointingService).recordEvent(eq(EventType.SIMULATION_INITIALIZED), isNull(), anyString());
     }
 
+    @Tag(TC_FR6_03)
     @Test
     @DisplayName("pauseSimulation and resumeSimulation change status and record events")
     void testPauseAndResumeSimulation() {
@@ -77,6 +85,7 @@ class SimulationSessionServiceTest {
         verify(checkpointingService).recordEvent(eq(EventType.SIMULATION_RESUMED), isNull(), anyString());
     }
 
+    @Tag(TC_FR6_03)
     @Test
     @DisplayName("Pausing a non-active simulation throws InvalidLifecycleTransitionException")
     void testPauseWhenNotActiveThrowsException() {
@@ -86,6 +95,7 @@ class SimulationSessionServiceTest {
         verify(tickManager, never()).setStatus(any());
     }
 
+    @Tag(TC_FR6_03)
     @Test
     @DisplayName("Resuming a non-paused simulation throws InvalidLifecycleTransitionException")
     void testResumeWhenNotPausedThrowsException() {
@@ -95,6 +105,7 @@ class SimulationSessionServiceTest {
         verify(tickManager, never()).setStatus(any());
     }
 
+    @Tag(TC_FR8_02)
     @Test
     @DisplayName("resetSimulation clears in-memory state and persisted history")
     void testResetSimulationClearsDatabase() {
@@ -106,6 +117,7 @@ class SimulationSessionServiceTest {
         order.verify(checkpointingService).recordEvent(eq(EventType.SIMULATION_RESET), isNull(), anyString());
     }
 
+    @Tag(TC_FR1_01)
     @Test
     @DisplayName("registerSimulator records an event only on first registration")
     void testRegisterSimulatorRecordsEventOnce() {
@@ -117,6 +129,7 @@ class SimulationSessionServiceTest {
         verify(checkpointingService, times(1)).recordEvent(eq(EventType.SIMULATOR_REGISTERED), eq(Side.BLUE), anyString());
     }
 
+    @Tag(TC_FR6_04)
     @Test
     @DisplayName("restoreFromSnapshot restores state and records event")
     void testRestoreFromSnapshot() {
@@ -132,6 +145,7 @@ class SimulationSessionServiceTest {
         verify(checkpointingService).recordEvent(eq(EventType.SNAPSHOT_RESTORED), isNull(), anyString());
     }
 
+    @Tag(TC_FR6_04)
     @Test
     @DisplayName("restoreFromSnapshot for non-existent snapshot throws SimulationException")
     void testRestoreNotFoundThrowsException() {

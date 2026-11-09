@@ -15,6 +15,7 @@ import com.nikitarybalko.wargamebroker.domain.service.StateCheckpointingService;
 import com.nikitarybalko.wargamebroker.support.TestSimulationSettings;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +27,17 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR1_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR1_03;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR1_04;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR2_03;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR3_04;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR4_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR5_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR6_01;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR6_02;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR6_05;
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR8_02;
 import static com.nikitarybalko.wargamebroker.support.TestSimulationSettings.EXPIRED_SUBMISSION_AGE_MS;
 import static com.nikitarybalko.wargamebroker.support.TestSimulationSettings.FIRST_TICK;
 import static com.nikitarybalko.wargamebroker.support.TestSimulationSettings.SECOND_TICK;
@@ -66,6 +78,7 @@ class BarrierTickManagerTest {
                 TestSimulationSettings.properties());
     }
 
+    @Tag(TC_FR1_04)
     @Test
     @DisplayName("Submitting in non-active status throws SimulationNotActiveException")
     void testSubmitWhenNotActiveThrowsException() {
@@ -75,6 +88,7 @@ class BarrierTickManagerTest {
                 tickManager.submitUnits(Side.BLUE, FIRST_TICK, List.of(blue)));
     }
 
+    @Tag(TC_FR1_04)
     @Test
     @DisplayName("Submitting invalid tick number throws InvalidTickException")
     void testSubmitInvalidTickThrowsException() {
@@ -85,6 +99,7 @@ class BarrierTickManagerTest {
                 tickManager.submitUnits(Side.BLUE, NON_CURRENT_TICK, List.of(blue)));
     }
 
+    @Tag(TC_FR2_03)
     @Test
     @DisplayName("Submitting mismatched side unit throws IllegalArgumentException")
     void testSubmitMismatchedSideUnitThrowsException() {
@@ -95,6 +110,7 @@ class BarrierTickManagerTest {
                 tickManager.submitUnits(Side.BLUE, FIRST_TICK, List.of(redUnitSentByBlue)));
     }
 
+    @Tag(TC_FR1_03)
     @Test
     @DisplayName("Barrier synchronization: tick completes only after both sides submit")
     void testBarrierSynchronizationFlow() {
@@ -124,6 +140,7 @@ class BarrierTickManagerTest {
         assertEquals(RED_UNIT, visibleForBlue.get(0).getId());
     }
 
+    @Tag(TC_FR4_01)
     @Test
     @DisplayName("Snapshot is saved every snapshotInterval ticks")
     void testSnapshotSavedAtInterval() {
@@ -142,6 +159,7 @@ class BarrierTickManagerTest {
         verify(checkpointingService, times(1)).checkAndSaveSnapshot(eq((long) SNAPSHOT_INTERVAL), anyList());
     }
 
+    @Tag(TC_FR6_01)
     @Test
     @DisplayName("Timeout handling switches simulation to PAUSED and records event")
     void testTimeoutHandling() {
@@ -159,6 +177,7 @@ class BarrierTickManagerTest {
         verify(checkpointingService).recordEvent(eq(EventType.SIMULATION_PAUSED), isNull(), anyString());
     }
 
+    @Tag(TC_FR8_02)
     @Test
     @DisplayName("Reset clears state and sets current tick back to 1")
     void testResetClearsState() {
@@ -171,6 +190,7 @@ class BarrierTickManagerTest {
         assertTrue(tickManager.getLatestVisibleEnemies(Side.BLUE).isEmpty());
     }
 
+    @Tag(TC_FR1_02)
     @Test
     @DisplayName("Submitting from an unregistered side throws SimulatorNotRegisteredException")
     void testSubmitFromUnregisteredSideThrowsException() {
@@ -183,6 +203,7 @@ class BarrierTickManagerTest {
                 manager.submitUnits(Side.BLUE, FIRST_TICK, List.of(blue)));
     }
 
+    @Tag(TC_FR3_04)
     @Test
     @DisplayName("Requesting visibility for an incomplete tick throws TickNotCompleteException")
     void testVisibilityForIncompleteTickThrowsException() {
@@ -194,6 +215,7 @@ class BarrierTickManagerTest {
         assertThrows(TickNotCompleteException.class, () -> tickManager.getVisibleEnemies(Side.RED, FUTURE_TICK));
     }
 
+    @Tag(TC_FR3_04)
     @Test
     @DisplayName("Requesting visibility for a tick without stored data throws TickDataUnavailableException")
     void testVisibilityForMissingPastTickThrowsException() {
@@ -202,6 +224,7 @@ class BarrierTickManagerTest {
         assertThrows(TickDataUnavailableException.class, () -> tickManager.getVisibleEnemies(Side.BLUE, PRUNED_TICK));
     }
 
+    @Tag(TC_FR6_02)
     @Test
     @DisplayName("Timeout pauses simulation when both sides are silent")
     void testTimeoutWhenBothSidesSilent() {
@@ -215,6 +238,7 @@ class BarrierTickManagerTest {
         verify(checkpointingService).recordEvent(eq(EventType.TIMEOUT_DISCONNECT), eq(Side.RED), anyString());
     }
 
+    @Tag(TC_FR6_02)
     @Test
     @DisplayName("Timeout check does nothing while the timeout has not elapsed")
     void testNoTimeoutBeforeDeadline() {
@@ -226,6 +250,7 @@ class BarrierTickManagerTest {
         verifyNoInteractions(checkpointingService);
     }
 
+    @Tag(TC_FR5_01)
     @Test
     @DisplayName("Unit casualty events are recorded once per status transition")
     void testCasualtyEventsRecordedOncePerTransition() {
@@ -244,6 +269,7 @@ class BarrierTickManagerTest {
         verify(checkpointingService, never()).recordEvent(any(), eq(Side.BLUE), anyString());
     }
 
+    @Tag(TC_FR6_05)
     @Test
     @DisplayName("State epoch increments on reset and restore, after restored units are in place")
     void testEpochIncrementsOnResetAndRestore() {

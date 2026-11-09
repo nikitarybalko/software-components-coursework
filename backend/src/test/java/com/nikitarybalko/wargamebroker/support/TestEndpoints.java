@@ -5,6 +5,7 @@ import com.nikitarybalko.wargamebroker.domain.model.Side;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -34,6 +35,20 @@ public final class TestEndpoints {
     public static final String STATE_EVENTS = STATE + "/events";
 
     public static final String REGISTER = "/api/v1/simulators/register";
+
+    public static final String RESTORE_TEMPLATE = SIMULATION + "/restore/{snapshotId}";
+    public static final String FOG_OF_WAR_TEMPLATE = TICKS + "/{tickNumber}/fog-of-war";
+
+    /** Every documented REST endpoint in the OpenAPI path form. */
+    public static final List<String> ALL_API_PATHS = List.of(
+            INIT, RESET, PAUSE, RESUME, RESTORE_TEMPLATE, STATUS,
+            SUBMIT, CURRENT_TICK, OWN_UNITS, FOG_OF_WAR_TEMPLATE,
+            STATE_FULL, STATE_SNAPSHOTS, STATE_EVENTS,
+            REGISTER);
+
+    public static final String API_DOCS = "/v3/api-docs";
+    public static final String SWAGGER_UI = "/swagger-ui.html";
+    public static final String SWAGGER_UI_INDEX = "/swagger-ui/index.html";
 
     public static String restore(UUID snapshotId) {
         return SIMULATION + "/restore/" + snapshotId;

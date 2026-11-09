@@ -7,6 +7,7 @@ import com.nikitarybalko.wargamebroker.web.controller.StateController;
 import com.nikitarybalko.wargamebroker.web.controller.TickController;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -24,11 +25,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR7_03;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Fails the build when a new endpoint forgets to declare who may call it.
  */
+@Tag(TC_FR7_03)
 @DisplayName("Security tests: every endpoint declares an access rule")
 class EndpointAccessCoverageTest {
 
