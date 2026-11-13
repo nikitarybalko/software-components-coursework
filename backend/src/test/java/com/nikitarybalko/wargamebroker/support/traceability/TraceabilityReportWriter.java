@@ -26,12 +26,15 @@ public final class TraceabilityReportWriter {
     public static final String MATRIX_MARKDOWN = "traceability-matrix.md";
     public static final String MATRIX_TSV = "traceability-matrix.tsv";
     public static final String TEST_CASES_MARKDOWN = "test-cases.md";
+    public static final String TEST_CASES_TSV = "test-cases.tsv";
 
     private static final DateTimeFormatter TIMESTAMP = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
     private static final String NEWLINE = "\n";
     private static final String CELL_SEPARATOR = " | ";
     private static final String LIST_SEPARATOR = ", ";
     private static final String NO_VALUE = "—";
+    private static final String TAB = "\t";
+    private static final String ESCAPED_NEWLINE = "\\n";
 
     private static final Map<String, String> LEVEL_LABELS = Map.of(
             "unit", "Модульний",
@@ -68,6 +71,7 @@ public final class TraceabilityReportWriter {
         Files.writeString(outputDirectory.resolve(MATRIX_MARKDOWN), matrixMarkdown(matrix));
         Files.writeString(outputDirectory.resolve(MATRIX_TSV), matrixTsv(matrix));
         Files.writeString(outputDirectory.resolve(TEST_CASES_MARKDOWN), testCasesMarkdown(matrix));
+        Files.writeString(outputDirectory.resolve(TEST_CASES_TSV), testCasesTsv(matrix));
     }
 
     String matrixMarkdown(TraceabilityMatrix matrix) {
@@ -101,6 +105,41 @@ public final class TraceabilityReportWriter {
         Stream<String> header = Stream.of("# Тест-кейси", "");
         Stream<String> body = matrix.testCaseRows().stream().map(this::testCaseSection);
         return Stream.concat(header, body).collect(Collectors.joining(NEWLINE)) + NEWLINE;
+    }
+
+    /** Test cases with multi-line cells (steps, automated tests) escaped as \\n so every row stays on one line. */
+    String testCasesTsv(TraceabilityMatrix matrix) {
+        Stream<String> header = Stream.of(String.join(TAB, "ID", "Назва", "Вимоги", "Рівень", "Виконання",
+                "Передумови", "Кроки", "Очікуваний результат", "Автотести", "Результат"));
+        Stream<String> rows = matrix.testCaseRows().stream().map(row -> {
+            TestCaseSpec testCase = row.testCase();
+            return Stream.of(
+                            testCase.id(),
+                            testCase.title(),
+                            String.join(LIST_SEPARATOR, testCase.requirements()),
+                            LEVEL_LABELS.getOrDefault(testCase.level(), testCase.level()),
+                            testCase.isAutomated() ? "Автоматизоване" : "Ручне",
+                            testCase.preconditions(),
+                            numberedSteps(testCase),
+                            testCase.expected(),
+                            row.tests().stream()
+                                    .map(test -> test.testName() + " — " + OUTCOME_LABELS.get(test.outcome()))
+                                    .collect(Collectors.joining(ESCAPED_NEWLINE)),
+                            row.verdict().label())
+                    .map(TraceabilityReportWriter::tsvCell)
+                    .collect(Collectors.joining(TAB));
+        });
+        return Stream.concat(header, rows).collect(Collectors.joining(NEWLINE)) + NEWLINE;
+    }
+
+    private static String numberedSteps(TestCaseSpec testCase) {
+        return IntStream.range(0, testCase.steps().size())
+                .mapToObj(index -> (index + 1) + ". " + testCase.steps().get(index))
+                .collect(Collectors.joining(ESCAPED_NEWLINE));
+    }
+
+    private static String tsvCell(String value) {
+        return value.replace(TAB, " ").replace(NEWLINE, ESCAPED_NEWLINE);
     }
 
     private String summary(TraceabilityMatrix matrix) {
