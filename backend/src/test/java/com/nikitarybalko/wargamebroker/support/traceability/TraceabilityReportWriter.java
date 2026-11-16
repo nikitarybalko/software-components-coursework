@@ -56,6 +56,7 @@ public final class TraceabilityReportWriter {
     private static final Map<Verdict, String> IMPLEMENTATION_STATUS = Map.of(
             Verdict.PASSED, "Реалізовано",
             Verdict.FAILED, "Потребує виправлення",
+            Verdict.PARTIAL, "Реалізовано, перевірено частково",
             Verdict.NOT_RUN, "Не перевірено",
             Verdict.MANUAL, "Реалізовано, перевіряється вручну",
             Verdict.NOT_COVERED, "Не перевірено");
