@@ -2,17 +2,17 @@
 
 Звіти про дефекти, знайдені й виправлені під час розробки Wargame Broker. Кожен звіт пов'язаний з вимогою і тест-кейсом з [requirements.yaml](../requirements.yaml) та [test-cases.yaml](../test-cases.yaml), комітом-виправленням і регресійним тестом.
 
-| ID | Заголовок | Область | Серйозність | Пріоритет | Статус |
-| --- | --- | --- | --- | --- | --- |
-| [BR-01](BR-01.md) | Некоректне значення переліку в JSON повертає 500 замість 400 | API | Major | High | Closed |
-| [BR-02](BR-02.md) | Подія VALIDATION_ERROR втрачається, якщо перелік помилок довший за 1000 символів | БД | Major | Medium | Closed |
-| [BR-03](BR-03.md) | Ключ сторони дозволяє керувати сесією та бачити повну обстановку | Безпека | Critical | High | Closed |
-| [BR-04](BR-04.md) | Розвідка за незавершений тік повертається порожньою, і симулятори ходять двічі | Функціонал | Major | High | Closed |
-| [BR-05](BR-05.md) | Тайм-аут не спрацьовує, коли не відповідають обидва симулятори | Функціонал | Major | Medium | Closed |
-| [BR-06](BR-06.md) | Скидання симуляції не очищує snapshot'и та журнал подій у БД | БД | Major | Medium | Closed |
-| [BR-07](BR-07.md) | Після відновлення зі snapshot симулятори перезаписують відновлений стан | Інтеграція | Major | High | Closed |
-| [BR-08](BR-08.md) | Межі карти змінюються між тіками: з'являється і зникає стовпчик N | UI | Minor | Medium | Closed |
-| [BR-09](BR-09.md) | У режимі «Очима Blue» сліди руху противника видно крізь туман війни | UI | Major | Medium | Closed |
+| ID | Issue | Заголовок | Область | Серйозність | Пріоритет | Статус |
+| --- | --- | --- | --- | --- | --- | --- |
+| [BR-01](BR-01.md) | [#2](https://github.com/nikitarybalko/software-components-coursework/issues/2) | Некоректне значення переліку в JSON повертає 500 замість 400 | API | Major | High | Closed |
+| [BR-02](BR-02.md) | [#3](https://github.com/nikitarybalko/software-components-coursework/issues/3) | Подія VALIDATION_ERROR втрачається, якщо перелік помилок довший за 1000 символів | БД | Major | Medium | Closed |
+| [BR-03](BR-03.md) | [#4](https://github.com/nikitarybalko/software-components-coursework/issues/4) | Ключ сторони дозволяє керувати сесією та бачити повну обстановку | Безпека | Critical | High | Closed |
+| [BR-04](BR-04.md) | [#5](https://github.com/nikitarybalko/software-components-coursework/issues/5) | Розвідка за незавершений тік повертається порожньою, і симулятори ходять двічі | Функціонал | Major | High | Closed |
+| [BR-05](BR-05.md) | [#6](https://github.com/nikitarybalko/software-components-coursework/issues/6) | Тайм-аут не спрацьовує, коли не відповідають обидва симулятори | Функціонал | Major | Medium | Closed |
+| [BR-06](BR-06.md) | [#7](https://github.com/nikitarybalko/software-components-coursework/issues/7) | Скидання симуляції не очищує snapshot'и та журнал подій у БД | БД | Major | Medium | Closed |
+| [BR-07](BR-07.md) | [#8](https://github.com/nikitarybalko/software-components-coursework/issues/8) | Після відновлення зі snapshot симулятори перезаписують відновлений стан | Інтеграція | Major | High | Closed |
+| [BR-08](BR-08.md) | [#9](https://github.com/nikitarybalko/software-components-coursework/issues/9) | Межі карти змінюються між тіками: з'являється і зникає стовпчик N | UI | Minor | Medium | Closed |
+| [BR-09](BR-09.md) | [#10](https://github.com/nikitarybalko/software-components-coursework/issues/10) | У режимі «Очима Blue» сліди руху противника видно крізь туман війни | UI | Major | Medium | Closed |
 
 ## Серйозність
 
