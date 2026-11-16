@@ -13,6 +13,7 @@
 | [BR-07](BR-07.md) | [#8](https://github.com/nikitarybalko/software-components-coursework/issues/8) | Після відновлення зі snapshot симулятори перезаписують відновлений стан | Інтеграція | Major | High | Closed |
 | [BR-08](BR-08.md) | [#9](https://github.com/nikitarybalko/software-components-coursework/issues/9) | Межі карти змінюються між тіками: з'являється і зникає стовпчик N | UI | Minor | Medium | Closed |
 | [BR-09](BR-09.md) | [#10](https://github.com/nikitarybalko/software-components-coursework/issues/10) | У режимі «Очима Blue» сліди руху противника видно крізь туман війни | UI | Major | Medium | Closed |
+| [BR-10](BR-10.md) | ще не опубліковано | Скидання симуляції після тривалого бою триває понад 100 секунд | БД | Major | High | Closed |
 
 ## Серйозність
 

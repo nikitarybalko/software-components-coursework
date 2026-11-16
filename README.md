@@ -18,7 +18,7 @@
 | **Серверний мікросервіс** | **Java 21 LTS**, **Spring Boot 3.4**, Spring Data JPA, Hibernate Validator, **Lombok** |
 | **База даних** | **PostgreSQL** |
 | **Документація API** | **OpenAPI 3 / Swagger UI** (`springdoc-openapi`) |
-| **Тестування** | **JUnit 5**, **Mockito**, Spring MockMvc, **Testcontainers** (PostgreSQL) |
+| **Тестування** | **JUnit 5**, **Mockito**, Spring MockMvc, **Testcontainers** (PostgreSQL), **Selenium WebDriver**, **Apache JMeter**, **JaCoCo** |
 | **Архітектурні діаграми** | **PlantUML** |
 | **Mock-симулятори** | **Python 3** |
 | **Фронтенд** | **Next.js 14** (App Router), React, TypeScript, TailwindCSS, SVG |
@@ -71,12 +71,29 @@ cd backend && ./mvnw test
 
 Потрібен запущений Docker: інтеграційні тести піднімають PostgreSQL 16 через Testcontainers.
 
+`./mvnw verify` додатково перевіряє покриття коду JaCoCo: збірка падає, якщо покрито менше 80% рядків. Звіт про покриття: `backend/target/site/jacoco/index.html`.
+
+Selenium-тести дашборда (Chrome і Firefox у контейнерах Testcontainers) потребують запущеного стека без симуляторів і вмикаються профілем `e2e`:
+
+```bash
+docker compose up -d --build
+cd backend && ./mvnw verify -Pe2e
+```
+
+Навантажувальний тест JMeter запускається проти запущеного стека; результати й HTML-звіт зберігаються в `load-tests/results/<час>`:
+
+```bash
+DURATION=120 load-tests/run-load-test.sh
+```
+
 | Рівень | Інструменти | Що покриває |
 | :--- | :--- | :--- |
 | Unit | JUnit 5 + Mockito | Туман війни, `UnitState`, бар'єрна синхронізація тіків, життєвий цикл сесії |
 | Web slice | `@WebMvcTest` + MockMvc | контролери, валідація, API-ключі та ролі, коди помилок |
 | Інтеграційні | `@SpringBootTest` / `@DataJpaTest` + Testcontainers | повний цикл REST → ядро → PostgreSQL, snapshot'и, журнал подій, Reset, відновлення зі snapshot'а |
 | Конфігураційні | JUnit 5 + SnakeYAML | версії Java і Spring Boot, сервіси та ліміти пам'яті в docker-compose, налаштування PostgreSQL |
+| UI (E2E) | Selenium WebDriver + Testcontainers | дашборд: обстановка, режими сторін, пауза, скидання, відновлення з контрольної точки |
+| Навантажувальні | Apache JMeter | затримки та помилки API під тривалим боєм, пам'ять контейнера ([звіт](docs/testing/load-test-report.md)) |
 
 ### Тест-план
 
