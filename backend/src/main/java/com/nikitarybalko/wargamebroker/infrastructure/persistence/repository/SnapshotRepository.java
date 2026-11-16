@@ -3,6 +3,8 @@ package com.nikitarybalko.wargamebroker.infrastructure.persistence.repository;
 import com.nikitarybalko.wargamebroker.infrastructure.persistence.entity.SnapshotEntity;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,4 +14,9 @@ import java.util.UUID;
 public interface SnapshotRepository extends JpaRepository<SnapshotEntity, UUID> {
 
     List<SnapshotEntity> findAllByOrderByTickNumberDesc(Limit limit);
+
+    /** Bulk delete of all snapshot units in one statement, without loading them into the persistence context. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from SnapshotUnitEntity")
+    int deleteAllUnits();
 }

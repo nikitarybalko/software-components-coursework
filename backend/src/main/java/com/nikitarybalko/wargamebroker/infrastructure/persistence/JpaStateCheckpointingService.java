@@ -96,9 +96,10 @@ public class JpaStateCheckpointingService implements StateCheckpointingService {
     @Override
     @Transactional
     public void clearAll() {
-        snapshotRepository.deleteAll();
-        eventLogRepository.deleteAll();
-        log.info("Cleared all snapshots and event logs from database");
+        int units = snapshotRepository.deleteAllUnits();
+        snapshotRepository.deleteAllInBatch();
+        eventLogRepository.deleteAllInBatch();
+        log.info("Cleared all snapshots ({} units) and event logs from database", units);
     }
 
     private String fitToColumn(String message) {
