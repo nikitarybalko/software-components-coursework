@@ -1,0 +1,15 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+wargame:
+  security:
+    blue-api-key: blue-secret-token
+    red-api-key: red-secret-token
+    admin-api-key: admin-secret-token
+  simulation:
+    tick-timeout-ms: 1000
+    snapshot-interval: 2
+    scheduler:
+      enabled: false
