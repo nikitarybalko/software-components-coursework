@@ -1,0 +1,192 @@
+@startuml class_domain
+!include style.iuml
+skinparam classAttributeIconSize 0
+hide empty members
+title Діаграма класів: ядро предметної області
+
+package "domain.model" {
+    enum Side {
+        BLUE
+        RED
+        + opponent(): Side
+    }
+
+    enum UnitType {
+        ARMOR
+        MECHANIZED_INFANTRY
+        INFANTRY
+        RECON
+        UNKNOWN
+    }
+
+    enum UnitStatus {
+        HEALTHY
+        DAMAGED
+        DESTROYED
+    }
+
+    enum SimulationStatus {
+        INITIALIZING
+        ACTIVE
+        PAUSED
+        STOPPED
+    }
+
+    enum EventType {
+        UNIT_DESTROYED
+        UNIT_DAMAGED
+        VALIDATION_ERROR
+        TIMEOUT_DISCONNECT
+        SIMULATOR_REGISTERED
+        SIMULATION_INITIALIZED
+        SIMULATION_PAUSED
+        SIMULATION_RESUMED
+        SIMULATION_RESET
+        SNAPSHOT_SAVED
+        SNAPSHOT_RESTORED
+    }
+
+    class UnitState <<immutable>> {
+        + {static} DAMAGED_VIEW_RADIUS_FACTOR: double = 0.5
+        - id: String
+        - side: Side
+        - type: UnitType
+        - x: double
+        - y: double
+        - viewRadius: double
+        - status: UnitStatus
+        + getEffectiveViewRadius(): double
+        + distanceTo(other: UnitState): double
+        + isOperational(): boolean
+        + canObserve(): boolean
+    }
+
+    class SimulationTick <<immutable>> {
+        - tickNumber: long
+        - timestamp: Instant
+        - status: SimulationStatus
+        - blueUnits: List<UnitState>
+        - redUnits: List<UnitState>
+        + getAllUnits(): List<UnitState>
+    }
+
+    class Snapshot <<immutable>> {
+        - id: UUID
+        - tickNumber: long
+        - createdAt: Instant
+        - units: List<UnitState>
+    }
+
+    class EventLog <<immutable>> {
+        - id: UUID
+        - timestamp: Instant
+        - type: EventType
+        - side: Side
+        - message: String
+    }
+
+    UnitState --> "1" Side
+    UnitState --> "1" UnitType
+    UnitState --> "1" UnitStatus
+    SimulationTick --> "1" SimulationStatus
+    SimulationTick o-- "*" UnitState
+    Snapshot o-- "*" UnitState
+    EventLog --> "1" EventType
+    EventLog --> "0..1" Side
+}
+
+package "domain.service" {
+    interface FogOfWarService {
+        + calculateVisibleEnemies(allies: List<UnitState>, enemies: List<UnitState>): List<UnitState>
+        + isVisible(observer: UnitState, target: UnitState): boolean
+    }
+
+    interface TickManager {
+        + getCurrentTick(): long
+        + getEpoch(): long
+        + getStatus(): SimulationStatus
+        + setStatus(status: SimulationStatus)
+        + submitUnits(side: Side, tickNumber: long, units: List<UnitState>)
+        + isTickComplete(tickNumber: long): boolean
+        + getSubmittedSides(tickNumber: long): Set<Side>
+        + getVisibleEnemies(side: Side, tickNumber: long): List<UnitState>
+        + getLatestVisibleEnemies(side: Side): List<UnitState>
+        + getLatestUnits(side: Side): List<UnitState>
+        + checkTimeouts()
+        + reset()
+        + restoreState(tickNumber: long, units: List<UnitState>)
+    }
+
+    interface SimulationSessionService {
+        + registerSimulator(side: Side)
+        + initSimulation()
+        + resetSimulation()
+        + pauseSimulation(reason: String)
+        + resumeSimulation()
+        + restoreFromSnapshot(snapshotId: UUID)
+        + getStatus(): SimulationStatus
+    }
+
+    interface SimulatorRegistry {
+        + register(side: Side): boolean
+        + isRegistered(side: Side): boolean
+        + getRegisteredSides(): Set<Side>
+    }
+
+    interface StateCheckpointingService {
+        + checkAndSaveSnapshot(tickNumber: long, units: List<UnitState>)
+        + recordEvent(type: EventType, side: Side, message: String)
+        + loadSnapshot(snapshotId: UUID): Optional<Snapshot>
+        + getRecentSnapshots(): List<Snapshot>
+        + getRecentEvents(): List<EventLog>
+        + clearAll()
+    }
+}
+
+package "domain.service.impl" {
+    class EuclideanFogOfWarService {
+        - extractActiveObservers(allies: List<UnitState>): List<UnitState>
+        - isEnemyDetected(observers: List<UnitState>, enemy: UnitState): boolean
+    }
+
+    class BarrierTickManager {
+        - currentTick: long
+        - epoch: long
+        - status: SimulationStatus
+        - lastSubmitTime: Instant
+        - settings: SimulationProperties
+        - submissions: Map<Side, Map<Long, List<UnitState>>>
+        - visibleEnemies: Map<Side, Map<Long, List<UnitState>>>
+        - latestUnits: Map<Side, List<UnitState>>
+        - knownUnitStatuses: Map<UnitKey, UnitStatus>
+        - processTick(tickNumber: long)
+        - calculateAndCacheVisibility(tickNumber: long, blues, reds)
+        - recordStatusTransitions(units: List<UnitState>)
+    }
+
+    class SimulationSessionServiceImpl {
+        - requireStatus(expected: SimulationStatus, action: String)
+    }
+
+    class InMemorySimulatorRegistry {
+        - registeredSides: Set<Side>
+    }
+}
+
+FogOfWarService <|.. EuclideanFogOfWarService
+TickManager <|.. BarrierTickManager
+SimulationSessionService <|.. SimulationSessionServiceImpl
+SimulatorRegistry <|.. InMemorySimulatorRegistry
+
+BarrierTickManager --> FogOfWarService
+BarrierTickManager --> StateCheckpointingService
+BarrierTickManager --> SimulatorRegistry
+SimulationSessionServiceImpl --> TickManager
+SimulationSessionServiceImpl --> StateCheckpointingService
+SimulationSessionServiceImpl --> SimulatorRegistry
+
+BarrierTickManager ..> UnitState
+StateCheckpointingService ..> Snapshot
+StateCheckpointingService ..> EventLog
+
+@enduml

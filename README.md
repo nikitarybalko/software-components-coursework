@@ -38,6 +38,8 @@ software-components-coursework/
 └── docs/                     # Проєктна документація курсової роботи
 ```
 
+UML-діаграми (прецеденти, компоненти, класи, розгортання) лежать у [docs/plantuml](docs/plantuml/README.md).
+
 
 ---
 
