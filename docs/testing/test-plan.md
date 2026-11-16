@@ -160,7 +160,7 @@ New → In Progress → Fixed → Verified → Closed
 
 ## 2.4 Відстеження дефектів
 
-Дефекти BR-01…BR-09 зареєстровано в GitHub Issues (№2–10) з мітками серйозності, пріоритету й області, а також у [docs/testing/bug-reports](bug-reports/README.md) у форматі додатка до записки.
+Усі дефекти зареєстровано в GitHub Issues (№2–11) з мітками серйозності, пріоритету й області, а також у [docs/testing/bug-reports](bug-reports/README.md) у форматі додатка до записки.
 
 ### 2.4.1 Метрики якості
 
