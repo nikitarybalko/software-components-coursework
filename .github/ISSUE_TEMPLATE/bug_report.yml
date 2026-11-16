@@ -1,0 +1,127 @@
+name: Баг-репорт
+description: Повідомити про дефект Wargame Broker, симуляторів або Дашборду Командира
+title: "[BUG] "
+labels: ["bug", "status: new"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Один звіт описує один дефект. Перед створенням перевірте, чи немає вже такого звіту.
+        Серйозність визначає вплив на систему, пріоритет — терміновість виправлення.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Компонент
+      options:
+        - Брокер — REST API та валідація
+        - Брокер — синхронізація тіків (Tick Manager)
+        - Брокер — туман війни
+        - Брокер — збереження стану (PostgreSQL)
+        - Брокер — безпека
+        - Дашборд Командира
+        - Симулятори (Mesa)
+        - Розгортання (Docker)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Серйозність (Severity)
+      description: |
+        Blocker — система або ключовий сценарій не працює, обхідного шляху немає.
+        Critical — порушено безпеку чи цілісність даних, або основна функція дає хибний результат.
+        Major — функція працює некоректно, вплив обмежений або є обхідний шлях.
+        Minor — незначне відхилення, що не впливає на результат.
+        Trivial — косметичний дефект.
+      options:
+        - Blocker
+        - Critical
+        - Major
+        - Minor
+        - Trivial
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Пріоритет (Priority)
+      description: High — виправити в поточному циклі; Medium — у наступному; Low — коли буде час.
+      options:
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: Відтворюваність
+      options:
+        - Завжди
+        - Іноді
+        - Один раз
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Версія
+      description: Коміт, на якому відтворюється дефект
+      placeholder: c2d8df4
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Середовище
+      placeholder: ОС, Java, Docker, PostgreSQL, браузер
+    validations:
+      required: true
+
+  - type: input
+    id: traceability
+    attributes:
+      label: Вимоги та тест-кейси
+      description: Ідентифікатори з docs/testing
+      placeholder: FR-2, TC-FR2-04
+
+  - type: textarea
+    id: preconditions
+    attributes:
+      label: Передумови
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Кроки відтворення
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Очікуваний результат
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Фактичний результат
+    validations:
+      required: true
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Вкладення (логи, відповіді API, скриншоти)
+      render: text

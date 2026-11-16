@@ -1,0 +1,10 @@
+Запит: POST /api/v1/simulation/ticks/submit (X-API-KEY: blue-secret-token), status = "BROKEN"
+
+Відповідь:
+{"timestamp":"2026-11-16T18:55:52.613672805Z","status":500,"error":"Internal Server Error","message":"An unexpected server error occurred","details":[]}
+HTTP 500
+
+Лог брокера:
+2026-11-16T20:55:52.610+02:00 ERROR 12778 --- [wargame-broker] [io-18080-exec-5] c.n.w.w.e.GlobalExceptionHandler         : Internal system error occurred
+
+org.springframework.http.converter.HttpMessageNotReadableException: JSON parse error: Cannot deserialize value of type `com.nikitarybalko.wargamebroker.domain.model.UnitStatus` from String "BROKEN": not one of the values accepted for Enum class: [DESTROYED, HEALTHY, DAMAGED]

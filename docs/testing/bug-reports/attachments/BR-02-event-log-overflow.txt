@@ -1,0 +1,14 @@
+Запит: POST /api/v1/simulation/ticks/submit (X-API-KEY: blue-secret-token), 30 юнітів з viewRadius = -5
+
+Відповідь:
+{"timestamp":"2026-11-16T18:55:52.727+00:00","status":400,"error":"Bad Request","path":"/api/v1/simulation/ticks/submit"}
+HTTP 400
+
+Журнал подій після запиту:
+events: ['SIMULATOR_REGISTERED', 'SIMULATION_INITIALIZED']
+VALIDATION_ERROR saved: False
+
+Лог брокера:
+2026-11-16T20:55:52.710+02:00 ERROR 12778 --- [wargame-broker] [io-18080-exec-6] o.h.engine.jdbc.spi.SqlExceptionHelper   : ERROR: value too long for type character varying(1000)
+2026-11-16T20:55:52.714+02:00  WARN 12778 --- [wargame-broker] [io-18080-exec-6] .m.m.a.ExceptionHandlerExceptionResolver : Failure in @ExceptionHandler com.nikitarybalko.wargamebroker.web.exception.GlobalExceptionHandler#handleValidationException(MethodArgumentNotValidException)
+org.springframework.dao.DataIntegrityViolationException: could not execute statement [ERROR: value too long for type character varying(1000)] [insert into event_logs (event_type,message,side,timestamp,id) values (?,?,?,?,?)]; SQL [insert into event_logs (event_type,message,side,timestamp,id) values (?,?,?,?,?)]
