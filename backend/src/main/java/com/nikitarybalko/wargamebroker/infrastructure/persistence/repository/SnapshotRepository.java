@@ -15,8 +15,11 @@ public interface SnapshotRepository extends JpaRepository<SnapshotEntity, UUID> 
 
     List<SnapshotEntity> findAllByOrderByTickNumberDesc(Limit limit);
 
-    /** Bulk delete of all snapshot units in one statement, without loading them into the persistence context. */
+    /**
+     * Empties snapshots and their units in constant time; a row-by-row delete of a long battle's history
+     * takes minutes because of the foreign key check on every removed snapshot.
+     */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("delete from SnapshotUnitEntity")
-    int deleteAllUnits();
+    @Query(value = "TRUNCATE TABLE snapshot_units, snapshots", nativeQuery = true)
+    void truncateSnapshots();
 }
