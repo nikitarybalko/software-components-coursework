@@ -78,6 +78,10 @@ cd backend && ./mvnw test
 | Інтеграційні | `@SpringBootTest` / `@DataJpaTest` + Testcontainers | повний цикл REST → ядро → PostgreSQL, snapshot'и, журнал подій, Reset, відновлення зі snapshot'а |
 | Конфігураційні | JUnit 5 + SnakeYAML | версії Java і Spring Boot, сервіси та ліміти пам'яті в docker-compose, налаштування PostgreSQL |
 
+### Тест-план
+
+[docs/testing/test-plan.md](docs/testing/test-plan.md) описує обсяг і стратегію тестування за рівнями, дослідницькі сесії, критерії якості, цикли тестування, життєвий цикл дефектів, метрики, ресурси, ризики та ролі.
+
 ### Трасування вимог
 
 Вимоги та тест-кейси описано в [docs/testing/requirements.yaml](docs/testing/requirements.yaml) і [docs/testing/test-cases.yaml](docs/testing/test-cases.yaml). Ідентифікатори вимог збігаються з Requirements Traceability Matrix курсової роботи. Автотести позначено тегами тест-кейсів, наприклад `@Tag(TC_FR3_01)`.
