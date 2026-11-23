@@ -58,3 +58,6 @@ postgres-data/
 
 # JMeter results
 load-tests/results/
+
+# Explanatory note (kept locally, not versioned)
+docs/report/

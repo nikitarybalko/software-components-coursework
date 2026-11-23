@@ -11,6 +11,7 @@
 | Класи: веб-шар та збереження | [class_web_infrastructure.puml](class_web_infrastructure.puml) | контролери, DTO, безпека, обробка винятків, JPA-сутності й репозиторії |
 | Розгортання | [deployment.puml](deployment.puml) | контейнери docker compose, ліміти пам'яті, порти, том БД |
 | Розгортання тестового середовища | [deployment_testing.puml](deployment_testing.puml) | Testcontainers, браузери Selenium, JMeter, звіти |
+| Життєвий цикл дефекту | [defect_lifecycle.puml](defect_lifecycle.puml) | стани дефекту від New до Closed, включно з Reopened |
 
 ![Компоненти](images/component.png)
 
