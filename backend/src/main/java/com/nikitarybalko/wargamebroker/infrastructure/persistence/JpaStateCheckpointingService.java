@@ -96,8 +96,8 @@ public class JpaStateCheckpointingService implements StateCheckpointingService {
     @Override
     @Transactional
     public void clearAll() {
-        snapshotRepository.deleteAll();
-        eventLogRepository.deleteAll();
+        snapshotRepository.truncateSnapshots();
+        eventLogRepository.truncateEvents();
         log.info("Cleared all snapshots and event logs from database");
     }
 

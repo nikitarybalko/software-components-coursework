@@ -1,0 +1,213 @@
+@startuml class_web_infrastructure
+!include style.iuml
+skinparam classAttributeIconSize 0
+hide empty members
+title Діаграма класів: веб-шар, безпека та збереження стану
+
+package "domain.service" {
+    interface TickManager
+    interface SimulationSessionService
+    interface SimulatorRegistry
+    interface StateCheckpointingService
+}
+
+package "web.security" {
+    enum ClientRole {
+        ROLE_BLUE
+        ROLE_RED
+        ROLE_ADMIN
+    }
+
+    class ApiKeyAuthFilter {
+        + {static} API_KEY_HEADER = "X-API-KEY"
+        - rolesByApiKey: Map<String, ClientRole>
+        # shouldNotFilter(request): boolean
+        # doFilterInternal(request, response, chain)
+    }
+
+    class RoleAuthorizationInterceptor {
+        + preHandle(request, response, handler): boolean
+    }
+
+    class EndpointAccessRules <<utility>> {
+        + {static} resolve(method, controllerType): Optional<AccessRule>
+    }
+
+    class AccessRule <<record>> {
+        allowedRoles: Set<ClientRole>
+        + permits(role: ClientRole): boolean
+    }
+
+    annotation RequiresRole {
+        value: ClientRole[]
+    }
+
+    annotation AnyAuthenticatedRole
+
+    class SecurityUtils <<utility>> {
+        + {static} getAuthenticatedRole(request): ClientRole
+        + {static} getAuthenticatedSide(request): Side
+        + {static} validateSideAccess(request, side: Side)
+    }
+
+    ApiKeyAuthFilter --> ClientRole
+    RoleAuthorizationInterceptor ..> EndpointAccessRules
+    EndpointAccessRules ..> RequiresRole : читає
+    EndpointAccessRules ..> AnyAuthenticatedRole : читає
+    EndpointAccessRules ..> AccessRule : створює
+    AccessRule --> "*" ClientRole
+}
+
+package "web.controller" {
+    class SimulatorController {
+        + register(request): SimulationStatusResponse
+    }
+
+    class TickController {
+        + submitUnits(request, body: SubmitUnitsRequest): SubmitUnitsResponse
+        + getFogOfWar(request, tickNumber: long): FogOfWarResponse
+        + getCurrentTickStatus(): SimulationStatusResponse
+        + getOwnUnits(request): OwnUnitsResponse
+    }
+
+    class SimulationController {
+        + initSimulation(): SimulationStatusResponse
+        + resetSimulation(): SimulationStatusResponse
+        + pauseSimulation(body: PauseRequest): SimulationStatusResponse
+        + resumeSimulation(): SimulationStatusResponse
+        + restoreFromSnapshot(snapshotId: UUID): SimulationStatusResponse
+        + getStatus(): SimulationStatusResponse
+    }
+
+    class StateController {
+        + getFullState(): FullBattlefieldResponse
+        + getSnapshots(): List<SnapshotDto>
+        + getEventLogs(): List<EventLogDto>
+    }
+}
+
+package "web.dto" {
+    class SubmitUnitsRequest {
+        @NotNull @Positive tickNumber: Long
+        @NotEmpty @Valid units: List<UnitDto>
+    }
+
+    class UnitDto {
+        @NotBlank id: String
+        @NotNull side: Side
+        unitType: UnitType
+        @NotNull x: Double
+        @NotNull y: Double
+        @NotNull @PositiveOrZero viewRadius: Double
+        @NotNull status: UnitStatus
+        effectiveViewRadius: Double
+        + {static} fromDomain(unit: UnitState): UnitDto
+        + toDomain(): UnitState
+    }
+
+    SubmitUnitsRequest *-- "1..*" UnitDto
+}
+
+class SimulationStatusMapper {
+    + currentStatus(): SimulationStatusResponse
+}
+
+package "web.exception" {
+    class GlobalExceptionHandler <<RestControllerAdvice>> {
+        - checkpointingService: StateCheckpointingService
+        + handleValidationException(ex): ErrorResponse
+        + handleUnreadablePayload(ex): ErrorResponse
+        + handleConflictException(ex): ErrorResponse
+        + handleNotFoundException(ex): ErrorResponse
+        + handleGeneralException(ex): ErrorResponse
+    }
+
+    class SimulationException
+    note bottom of SimulationException
+      Підкласи та HTTP-коди:
+      InvalidTickException — 400
+      SimulationNotActiveException,
+      SimulatorNotRegisteredException,
+      InvalidLifecycleTransitionException,
+      TickNotCompleteException — 409
+      SnapshotNotFoundException,
+      TickDataUnavailableException — 404
+      Помилки валідації JSON — 400
+      і подія VALIDATION_ERROR
+    end note
+
+    GlobalExceptionHandler ..> SimulationException : обробляє
+}
+
+package "infrastructure.persistence" {
+    class JpaStateCheckpointingService {
+        - snapshotRepository: SnapshotRepository
+        - eventLogRepository: EventLogRepository
+        - fitToColumn(message: String): String
+        - toDomainSnapshot(entity: SnapshotEntity): Snapshot
+    }
+
+    interface SnapshotRepository <<JpaRepository>> {
+        + findAllByOrderByTickNumberDesc(limit: Limit): List<SnapshotEntity>
+        + truncateSnapshots()
+    }
+
+    interface EventLogRepository <<JpaRepository>> {
+        + findAllByOrderByTimestampDesc(limit: Limit): List<EventLogEntity>
+        + truncateEvents()
+    }
+
+    class SnapshotEntity <<Entity snapshots>> {
+        - id: UUID
+        - tickNumber: long
+        - createdAt: Instant
+    }
+
+    class SnapshotUnitEntity <<Entity snapshot_units>> {
+        - id: UUID
+        - unitId: String
+        - side: Side
+        - unitType: UnitType
+        - x: double
+        - y: double
+        - viewRadius: double
+        - status: UnitStatus
+    }
+
+    class EventLogEntity <<Entity event_logs>> {
+        - id: UUID
+        - timestamp: Instant
+        - eventType: EventType
+        - side: Side
+        - message: String, до 1000 символів
+    }
+
+    JpaStateCheckpointingService --> SnapshotRepository
+    JpaStateCheckpointingService --> EventLogRepository
+    SnapshotRepository ..> SnapshotEntity
+    EventLogRepository ..> EventLogEntity
+    SnapshotEntity "1" *-- "*" SnapshotUnitEntity : units
+}
+
+class SimulationTimeoutScheduler {
+    + monitorTickTimeouts()
+}
+
+StateCheckpointingService <|.. JpaStateCheckpointingService
+
+SimulatorController --> SimulationSessionService
+SimulatorController --> SimulationStatusMapper
+SimulationController --> SimulationSessionService
+SimulationController --> SimulationStatusMapper
+TickController --> TickManager
+TickController --> SimulationStatusMapper
+TickController ..> SubmitUnitsRequest
+TickController ..> SecurityUtils
+StateController --> TickManager
+StateController --> StateCheckpointingService
+SimulationStatusMapper --> TickManager
+SimulationStatusMapper --> SimulatorRegistry
+GlobalExceptionHandler --> StateCheckpointingService
+SimulationTimeoutScheduler --> TickManager
+
+@enduml

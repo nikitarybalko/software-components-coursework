@@ -1,0 +1,22 @@
+Навантажувальний тест JMeter (load-tests/broker-load.jmx), 16.11.2026.
+Запит в усіх замірах:
+curl -X POST -H 'X-API-KEY: admin-secret-token' http://localhost:8080/api/v1/simulation/reset
+
+1. До виправлення, коміт 91a4d90
+120 с бою, 100 юнітів на сторону, 20 спостерігачів; зіграно 11 785 тіків.
+Стан БД після тесту: snapshots 2357, snapshot_units 471400, event_logs 2362
+reset: HTTP 200 in 105.339502s
+snapshot_units після скидання: 0
+Для порівняння: на початку того самого тесту (після 10-секундного пробного прогону) POST reset тривав 2063 мс.
+
+2. Перше виправлення, коміт 43274bf (масові DELETE замість deleteAll)
+Повторний 120-секундний тест (results/20261116-221108).
+Стан БД після тесту: snapshots 2191, snapshot_units 438200, event_logs 2195
+reset: HTTP 200 in 13.569442s
+Висновок: швидше у 7,8 раза, але час і далі росте з тривалістю бою -> Reopened.
+
+3. Остаточне виправлення, коміт f9e8c4c (TRUNCATE)
+Повторний 120-секундний тест (results/20261116-221611), зіграно 14 905 тіків.
+Стан БД після тесту: snapshots 2981, snapshot_units 596200, event_logs 2988
+reset: HTTP 200 in 0.025966s
+Стан БД після скидання: snapshots 0, snapshot_units 0, event_logs 1 (подія самого скидання)

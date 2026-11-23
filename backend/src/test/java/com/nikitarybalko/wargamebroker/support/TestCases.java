@@ -49,6 +49,11 @@ public final class TestCases {
     public static final String TC_FR9_01 = "TC-FR9-01";
     public static final String TC_FR9_02 = "TC-FR9-02";
 
+    public static final String TC_FR10_01 = "TC-FR10-01";
+    public static final String TC_FR10_02 = "TC-FR10-02";
+    public static final String TC_FR10_03 = "TC-FR10-03";
+    public static final String TC_FR10_04 = "TC-FR10-04";
+
     public static final String TC_FR11_01 = "TC-FR11-01";
     public static final String TC_FR11_02 = "TC-FR11-02";
 

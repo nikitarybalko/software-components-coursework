@@ -19,9 +19,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
+import jakarta.persistence.EntityManagerFactory;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR11_02;
 import static com.nikitarybalko.wargamebroker.support.TestCases.TC_FR2_05;
@@ -35,13 +40,14 @@ import static com.nikitarybalko.wargamebroker.support.TestUnitIds.RED_UNIT;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Tag(TC_NFR2_01)
-@DataJpaTest
+@DataJpaTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @DisplayName("Integration tests: Persistence & Checkpointing on PostgreSQL (JpaStateCheckpointingService)")
 class JpaStateCheckpointingServiceTest extends AbstractPostgresIntegrationTest {
 
     private static final long SNAPSHOT_TICK = 5;
     private static final String TRUNCATION_MARKER = "...";
+    private static final int SNAPSHOTS_IN_HISTORY = 20;
 
     @Autowired
     private SnapshotRepository snapshotRepository;
@@ -50,6 +56,12 @@ class JpaStateCheckpointingServiceTest extends AbstractPostgresIntegrationTest {
     private EventLogRepository eventLogRepository;
 
     private JpaStateCheckpointingService checkpointingService;
+
+    @Autowired
+    private TestEntityManager entityManager;
+
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
 
     @BeforeEach
     void setUp() {
@@ -137,6 +149,27 @@ class JpaStateCheckpointingServiceTest extends AbstractPostgresIntegrationTest {
         String storedMessage = checkpointingService.getRecentEvents().get(0).getMessage();
         assertEquals(EventLogEntity.MAX_MESSAGE_LENGTH, storedMessage.length());
         assertTrue(storedMessage.endsWith(TRUNCATION_MARKER));
+    }
+
+    @Test
+    @Tag(TC_FR8_02)
+    @DisplayName("clearAll removes the whole history with bulk statements instead of loading every entity")
+    void testClearAllUsesBulkDeletes() {
+        UnitState blue = new UnitState(BLUE_UNIT, Side.BLUE, 10.0, 20.0, 50.0, UnitStatus.HEALTHY);
+        UnitState red = new UnitState(RED_UNIT, Side.RED, 30.0, 40.0, 50.0, UnitStatus.HEALTHY);
+        IntStream.rangeClosed(1, SNAPSHOTS_IN_HISTORY)
+                .forEach(tick -> checkpointingService.checkAndSaveSnapshot(tick, List.of(blue, red)));
+        entityManager.flush();
+        entityManager.clear();
+        Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        statistics.clear();
+
+        checkpointingService.clearAll();
+
+        assertEquals(0, statistics.getEntityLoadCount(), "entities loaded while clearing history");
+        assertEquals(0, statistics.getEntityDeleteCount(), "entities deleted one by one");
+        assertTrue(checkpointingService.getRecentSnapshots().isEmpty());
+        assertTrue(checkpointingService.getRecentEvents().isEmpty());
     }
 
     private UnitState findUnit(Snapshot snapshot, String unitId) {

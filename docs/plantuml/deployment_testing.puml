@@ -1,0 +1,46 @@
+@startuml deployment_testing
+!include style.iuml
+title Діаграма розгортання тестового середовища
+
+node "Машина розробника" as DevMachine <<device>> {
+
+    node "JVM 21: Maven Surefire" as Surefire <<execution environment>> {
+        artifact "Модульні та веб-тести\nJUnit 5, Mockito, MockMvc" as UnitTests
+        artifact "Інтеграційні тести\n@SpringBootTest, @DataJpaTest" as IntegrationTests
+        artifact "E2E-тести дашборда\nSelenium WebDriver\n(профіль e2e)" as E2eTests
+        artifact "Агент JaCoCo" as Jacoco
+    }
+
+    node "Docker Engine" as Engine <<execution environment>> {
+
+        node "Testcontainers" as TcGroup {
+            node "postgres:16-alpine\n(на кожен прогін)" as TcPostgres <<container>>
+            node "selenium/standalone-chrome\nselenium/standalone-firefox" as TcBrowser <<container>>
+        }
+
+        node "Стек docker compose" as Stack {
+            node "dashboard :3000" as Dashboard <<container>>
+            node "backend :8080" as Backend <<container>>
+            node "postgres" as Postgres <<container>>
+        }
+
+        node "alpine/jmeter:5.6.3\n(--network host)" as JMeter <<container>> {
+            artifact "broker-load.jmx" as LoadPlan
+        }
+    }
+
+    artifact "target/site/jacoco\ntarget/traceability\nload-tests/results" as Reports
+}
+
+IntegrationTests --> TcPostgres : JDBC
+E2eTests --> TcBrowser : WebDriver (HTTP)
+E2eTests --> Backend : REST: підготовка обстановки
+TcBrowser --> Dashboard : HTTP host.testcontainers.internal:3000
+Dashboard --> Backend : REST
+Backend --> Postgres : JDBC
+JMeter --> Backend : HTTP localhost:8080\n21 віртуальний користувач
+Jacoco ..> Reports : jacoco.exec → HTML
+Surefire ..> Reports : матриця трасування
+JMeter ..> Reports : results.jtl, HTML-звіт
+
+@enduml

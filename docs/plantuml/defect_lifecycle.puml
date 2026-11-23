@@ -1,0 +1,18 @@
+@startuml defect_lifecycle
+!include style.iuml
+hide empty description
+title Життєвий цикл дефекту
+
+[*] --> New : звіт створено в GitHub Issues
+New --> InProgress : дефект відтворено
+InProgress --> Fixed : виправлення та регресійний\nтест закомічено
+Fixed --> Verified : регресійний тест і повторне\nвідтворення пройдено
+Fixed --> Reopened : перевірка не пройдена
+Verified --> Closed : issue закрито\nз посиланням на коміт
+Closed --> Reopened : дефект повернувся
+Reopened --> InProgress
+Closed --> [*]
+
+state "In Progress" as InProgress
+
+@enduml

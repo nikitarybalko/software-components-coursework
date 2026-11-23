@@ -1,0 +1,47 @@
+@startuml use_case_session
+!include style.iuml
+left to right direction
+title Діаграма прецедентів: керування симуляцією
+
+actor "Командир\n(через Дашборд)" as Commander
+actor "Таймер\n(планувальник)" as Timer
+
+rectangle "Wargame Broker" {
+    usecase "UC-6: Ініціалізувати\nсимуляцію (FR-8)" as Init
+    usecase "UC-7: Призупинити\nабо продовжити" as Pause
+    usecase "UC-8: Скинути\nсимуляцію (FR-8)" as Reset
+    usecase "UC-9: Відновити з контрольної\nточки (FR-6)" as Restore
+    usecase "UC-10: Переглянути обстановку,\nзліпки та журнал (FR-10)" as View
+    usecase "UC-5: Переглянути статус\nсимуляції" as Status
+    usecase "UC-11: Призупинити за тайм-аутом\nклієнта (FR-6)" as Timeout
+
+    usecase "UC-12: Автентифікуватися\nза API-ключем (FR-7)" as Auth
+    usecase "Очистити стан, кеш\nта історію в БД" as Clear
+    usecase "Завантажити зліпок з БД\n(FR-4)" as Load
+    usecase "Записати подію в журнал\n(FR-5)" as Events
+}
+
+Commander -- Init
+Commander -- Pause
+Commander -- Reset
+Commander -- Restore
+Commander -- View
+Commander -- Status
+Timer -- Timeout
+
+Init ..> Auth : <<include>>
+Pause ..> Auth : <<include>>
+Reset ..> Auth : <<include>>
+Restore ..> Auth : <<include>>
+View ..> Auth : <<include>>
+Status ..> Auth : <<include>>
+
+Reset ..> Clear : <<include>>
+Restore ..> Load : <<include>>
+Init ..> Events : <<include>>
+Pause ..> Events : <<include>>
+Reset ..> Events : <<include>>
+Restore ..> Events : <<include>>
+Timeout ..> Events : <<include>>
+
+@enduml

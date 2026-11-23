@@ -19,6 +19,7 @@ public record TraceabilityMatrix(List<RequirementRow> rows) {
     public enum Verdict {
         PASSED("Пройдено"),
         FAILED("Не пройдено"),
+        PARTIAL("Частково виконано"),
         NOT_RUN("Не виконувалось"),
         MANUAL("Ручна перевірка"),
         NOT_COVERED("Немає тест-кейсів");
@@ -111,7 +112,10 @@ public record TraceabilityMatrix(List<RequirementRow> rows) {
         if (automated.contains(Verdict.FAILED)) {
             return Verdict.FAILED;
         }
-        return automated.contains(Verdict.NOT_RUN) ? Verdict.NOT_RUN : Verdict.PASSED;
+        if (!automated.contains(Verdict.NOT_RUN)) {
+            return Verdict.PASSED;
+        }
+        return automated.contains(Verdict.PASSED) ? Verdict.PARTIAL : Verdict.NOT_RUN;
     }
 
     private static Predicate<TestCaseRow> distinctById() {

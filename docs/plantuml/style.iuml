@@ -1,0 +1,11 @@
+' Спільний стиль діаграм: монохромний, без тіней, придатний для друку в пояснювальній записці.
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam roundCorner 4
+skinparam packageStyle rectangle
+skinparam ArrowColor #333333
+skinparam BackgroundColor white
+skinparam NoteBackgroundColor white
+skinparam NoteBorderColor #555555

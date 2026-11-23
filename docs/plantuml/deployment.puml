@@ -1,0 +1,49 @@
+@startuml deployment
+!include style.iuml
+title Діаграма розгортання Wargame Broker (docker compose up -d --build)
+
+node "Робоча станція командира" as Workstation <<device>> {
+    node "Веб-браузер" as Browser <<execution environment>> {
+        artifact "Дашборд Командира\n(React, JavaScript)" as DashboardBundle
+        artifact "Swagger UI" as SwaggerUi
+    }
+}
+
+node "Хост Docker" as Host <<device>> {
+    node "Docker Engine 29 + Docker Compose" as Engine <<execution environment>> {
+
+        node "dashboard\nnode:22-alpine\nліміт 256 MiB" as DashboardContainer <<container>> {
+            artifact "Next.js standalone\nserver.js" as NextServer
+        }
+
+        node "backend\neclipse-temurin:21-jre-jammy\nліміт 512 MiB, 1 CPU\nJVM: MaxRAMPercentage=75" as BackendContainer <<container>> {
+            artifact "app.jar\n(Spring Boot 3.4)" as BrokerJar
+        }
+
+        node "postgres\npostgres:16-alpine\nліміт 256 MiB" as PostgresContainer <<container>> {
+            database "wargamedb" as WargameDb
+        }
+
+        node "simulators\npython:3.12-slim\nліміт 256 MiB\nпрофіль demo, запуск окремо" as SimulatorsContainer <<container>> {
+            artifact "run_simulation.py\nblue_simulator.py\nred_simulator.py\nmesa_model.py" as SimulatorScripts
+        }
+
+        storage "том postgres-data" as PgVolume
+    }
+}
+
+Browser --> DashboardContainer : HTTP :3000
+Browser --> BackendContainer : HTTP :8080\n/swagger-ui
+DashboardContainer --> BackendContainer : HTTP backend:8080\nREST/JSON, ключ адміністратора
+SimulatorsContainer --> BackendContainer : HTTP backend:8080\nREST/JSON, ключі Blue і Red
+BackendContainer --> PostgresContainer : JDBC postgres:5432
+PostgresContainer --> PgVolume : /var/lib/postgresql/data
+
+note right of BackendContainer
+  depends_on postgres (service_healthy);
+  healthcheck: TCP-з'єднання з :8080.
+  Ключі API та облікові дані БД
+  передаються змінними середовища.
+end note
+
+@enduml

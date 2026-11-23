@@ -1,0 +1,48 @@
+@startuml use_case_tick_exchange
+!include style.iuml
+left to right direction
+title Діаграма прецедентів: обмін даними тіку
+
+actor "Симулятор" as Simulator
+actor "Симулятор\nBlue Force" as Blue
+actor "Симулятор\nRed Force" as Red
+Blue --|> Simulator
+Red --|> Simulator
+
+rectangle "Wargame Broker" {
+    usecase "UC-1: Зареєструвати\nсимулятор (FR-1)" as Register
+    usecase "UC-2: Надіслати стан юнітів\nза тік (FR-1, FR-2, FR-11)" as Submit
+    usecase "UC-3: Отримати видимих\nворогів (FR-3)" as GetFog
+    usecase "UC-4: Отримати власні юніти\nпісля відновлення (FR-6)" as OwnUnits
+    usecase "UC-5: Переглянути статус\nсимуляції" as Status
+
+    usecase "UC-12: Автентифікуватися\nза API-ключем (FR-7)" as Auth
+    usecase "Перевірити пакет\n(Hibernate Validator)" as Validate
+    usecase "Відхилити пакет: 400\nі подія VALIDATION_ERROR" as Reject
+    usecase "Обробити тік після\nходів обох сторін (FR-1)" as Process
+    usecase "Розрахувати туман війни\n(FR-3, FR-9)" as Fog
+    usecase "Записати подію в журнал:\nреєстрація, пошкодження,\nзнищення (FR-5)" as Events
+    usecase "Зберегти зліпок\nкожні N тіків (FR-4)" as Save
+}
+
+Simulator -- Register
+Simulator -- Submit
+Simulator -- GetFog
+Simulator -- OwnUnits
+Simulator -- Status
+
+Register ..> Auth : <<include>>
+Submit ..> Auth : <<include>>
+GetFog ..> Auth : <<include>>
+OwnUnits ..> Auth : <<include>>
+Status ..> Auth : <<include>>
+
+Submit ..> Validate : <<include>>
+Validate <.. Reject : <<extend>>\nпакет некоректний
+Submit <.. Process : <<extend>>\nдругий хід тіку
+Process ..> Fog : <<include>>
+Process ..> Events : <<include>>
+Register ..> Events : <<include>>
+Process <.. Save : <<extend>>\nтік кратний N
+
+@enduml
